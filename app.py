@@ -18,12 +18,24 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.image import MIMEImage
 from flask_cors import CORS
-from reportlab.lib import colors
-from reportlab.lib.pagesizes import letter, A4
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import inch
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-import qrcode
+
+# Optional: reportlab for PDF export (may not work on all serverless platforms)
+try:
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import letter, A4
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import inch
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    REPORTLAB_AVAILABLE = True
+except ImportError:
+    REPORTLAB_AVAILABLE = False
+
+# Optional: qrcode for QR generation
+try:
+    import qrcode
+    QRCODE_AVAILABLE = True
+except ImportError:
+    QRCODE_AVAILABLE = False
 
 # Load environment variables from .env file
 load_dotenv()
@@ -44,9 +56,17 @@ else:
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'attendly.db')
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['UPLOAD_FOLDER'] = os.path.join(basedir, 'static', 'uploads')
 
-os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+# Use /tmp for uploads on Vercel (serverless is read-only)
+if os.environ.get('VERCEL'):
+    app.config['UPLOAD_FOLDER'] = '/tmp/uploads'
+else:
+    app.config['UPLOAD_FOLDER'] = os.path.join(basedir, 'static', 'uploads')
+
+try:
+    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+except OSError:
+    pass  # Ignore if can't create (read-only filesystem)
 
 db = SQLAlchemy(app)
 CORS(app, supports_credentials=True)
@@ -573,6 +593,10 @@ def export_attendees(event_id):
 @login_required
 def export_attendees_pdf(event_id):
     """Export attendees list as a styled PDF document."""
+    if not REPORTLAB_AVAILABLE:
+        flash('PDF export is not available on this server.', 'error')
+        return redirect(url_for('view_attendees', event_id=event_id))
+    
     event = Event.query.get_or_404(event_id)
     
     # Create PDF buffer
@@ -673,6 +697,8 @@ def export_attendees_pdf(event_id):
 
 def generate_qr_code_base64(data):
     """Generate a QR code and return as base64 string."""
+    if not QRCODE_AVAILABLE:
+        return None
     qr = qrcode.QRCode(
         version=1,
         error_correction=qrcode.constants.ERROR_CORRECT_L,
@@ -1005,8 +1031,11 @@ def api_rsvp():
     return jsonify({'success': True, 'attendance_id': attendance.id})
 
 # Create tables on startup (for Vercel serverless)
-with app.app_context():
-    db.create_all()
+try:
+    with app.app_context():
+        db.create_all()
+except Exception as e:
+    print(f"Database init error: {e}")
 
 if __name__ == '__main__':
     app.run(debug=True)
