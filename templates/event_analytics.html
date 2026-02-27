@@ -1,0 +1,675 @@
+{% extends 'base.html' %}
+{% block title %}{{ event.name }} - Analytics{% endblock %}
+{% block content %}
+<style>
+    .event-analytics-container {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 2rem 1rem;
+    }
+    .analytics-header {
+        margin-bottom: 2rem;
+    }
+    .back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #6b7280;
+        font-size: 0.875rem;
+        transition: color 0.2s ease;
+        text-decoration: none;
+        margin-bottom: 1rem;
+    }
+    .back-link:hover {
+        color: #06b6d4;
+        text-decoration: none;
+    }
+    .event-title {
+        font-family: 'Syne', sans-serif;
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #fff;
+        margin-bottom: 0.25rem;
+    }
+    .event-subtitle {
+        color: #6b7280;
+        font-size: 0.95rem;
+    }
+    
+    /* Stats Grid */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    .stat-card {
+        background: rgba(255, 255, 255, 0.03);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 14px;
+        padding: 1.25rem;
+        text-align: center;
+        transition: all 0.3s ease;
+    }
+    .stat-card:hover {
+        transform: translateY(-3px);
+        border-color: rgba(6, 182, 212, 0.3);
+    }
+    .stat-icon {
+        width: 40px;
+        height: 40px;
+        margin: 0 auto 0.75rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 10px;
+    }
+    .stat-icon.rsvps { background: rgba(6, 182, 212, 0.15); color: #06b6d4; }
+    .stat-icon.checkins { background: rgba(34, 197, 94, 0.15); color: #22c55e; }
+    .stat-icon.rate { background: rgba(249, 115, 22, 0.15); color: #f97316; }
+    .stat-icon.returning { background: rgba(168, 85, 247, 0.15); color: #a855f7; }
+    .stat-value {
+        font-family: 'Syne', sans-serif;
+        font-size: 2rem;
+        font-weight: 700;
+        color: #fff;
+        line-height: 1;
+        margin-bottom: 0.35rem;
+    }
+    .stat-label {
+        color: #6b7280;
+        font-size: 0.8rem;
+        font-weight: 500;
+    }
+    
+    /* Content Grid */
+    .content-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    .content-grid.single {
+        grid-template-columns: 1fr;
+    }
+    
+    /* Card Styles */
+    .card {
+        background: rgba(255, 255, 255, 0.03);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 16px;
+        padding: 1.5rem;
+    }
+    .card-title {
+        font-family: 'Syne', sans-serif;
+        font-size: 1rem;
+        font-weight: 600;
+        color: #fff;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .card-title svg {
+        color: #06b6d4;
+    }
+    
+    /* Bar Chart */
+    .bar-chart {
+        display: flex;
+        align-items: flex-end;
+        justify-content: flex-start;
+        height: 160px;
+        gap: 0.5rem;
+        padding: 0.5rem 0;
+        overflow-x: auto;
+    }
+    .bar-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-width: 45px;
+    }
+    .bar {
+        width: 100%;
+        max-width: 40px;
+        background: linear-gradient(180deg, #06b6d4 0%, #0891b2 100%);
+        border-radius: 4px 4px 0 0;
+        min-height: 4px;
+        transition: all 0.3s ease;
+    }
+    .bar:hover {
+        background: linear-gradient(180deg, #22d3ee 0%, #06b6d4 100%);
+    }
+    .bar.checkin {
+        background: linear-gradient(180deg, #22c55e 0%, #16a34a 100%);
+    }
+    .bar.checkin:hover {
+        background: linear-gradient(180deg, #4ade80 0%, #22c55e 100%);
+    }
+    .bar-label {
+        margin-top: 0.4rem;
+        font-size: 0.65rem;
+        color: #6b7280;
+        text-align: center;
+        white-space: nowrap;
+    }
+    .bar-value {
+        font-size: 0.7rem;
+        color: #fff;
+        font-weight: 500;
+        margin-bottom: 0.2rem;
+    }
+    
+    /* Donut Chart */
+    .donut-chart-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 1.5rem;
+        padding: 0.5rem 0;
+    }
+    .donut-chart {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .donut-center {
+        position: absolute;
+        width: 70px;
+        height: 70px;
+        background: rgba(10, 10, 10, 0.95);
+        border-radius: 50%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
+    .donut-center-value {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #fff;
+    }
+    .donut-center-label {
+        font-size: 0.65rem;
+        color: #6b7280;
+    }
+    .donut-legend {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+    }
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.8rem;
+        color: #d1d5db;
+    }
+    .legend-color {
+        width: 10px;
+        height: 10px;
+        border-radius: 3px;
+    }
+    .legend-color.student { background: #22c55e; }
+    .legend-color.working { background: #3b82f6; }
+    .legend-color.other { background: #6b7280; }
+    .legend-color.new { background: #06b6d4; }
+    .legend-color.returning { background: #a855f7; }
+    
+    /* Progress Ring */
+    .progress-ring-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 2rem;
+        padding: 1rem 0;
+    }
+    .progress-ring {
+        position: relative;
+        width: 140px;
+        height: 140px;
+    }
+    .progress-ring svg {
+        transform: rotate(-90deg);
+    }
+    .progress-ring-bg {
+        fill: none;
+        stroke: rgba(255,255,255,0.05);
+        stroke-width: 12;
+    }
+    .progress-ring-fill {
+        fill: none;
+        stroke: url(#gradient);
+        stroke-width: 12;
+        stroke-linecap: round;
+        transition: stroke-dashoffset 0.5s ease;
+    }
+    .progress-ring-center {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+    }
+    .progress-ring-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #fff;
+        line-height: 1;
+    }
+    .progress-ring-label {
+        font-size: 0.75rem;
+        color: #6b7280;
+        margin-top: 0.25rem;
+    }
+    .progress-stats {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    .progress-stat {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.875rem;
+        color: #9ca3af;
+    }
+    .progress-stat strong {
+        color: #fff;
+    }
+    .progress-stat.checked {
+        color: #22c55e;
+    }
+    
+    /* Recent Activity */
+    .recent-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    .recent-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.6rem 0.75rem;
+        background: rgba(255,255,255,0.02);
+        border-radius: 8px;
+    }
+    .recent-avatar {
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #06b6d4 0%, #22d3ee 100%);
+        border-radius: 50%;
+        font-weight: 600;
+        font-size: 0.75rem;
+        color: #000;
+    }
+    .recent-info {
+        flex: 1;
+        min-width: 0;
+    }
+    .recent-name {
+        font-weight: 500;
+        color: #fff;
+        font-size: 0.8rem;
+    }
+    .recent-email {
+        font-size: 0.7rem;
+        color: #6b7280;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .recent-badge {
+        padding: 0.2rem 0.5rem;
+        border-radius: 12px;
+        font-size: 0.65rem;
+        font-weight: 500;
+    }
+    .recent-badge.checked {
+        background: rgba(34, 197, 94, 0.15);
+        color: #22c55e;
+    }
+    .recent-badge.pending {
+        background: rgba(107, 114, 128, 0.15);
+        color: #9ca3af;
+    }
+    
+    /* Empty State */
+    .empty-state {
+        text-align: center;
+        padding: 2rem;
+        color: #6b7280;
+    }
+    
+    /* Responsive */
+    @media (max-width: 1024px) {
+        .stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+    
+    @media (max-width: 768px) {
+        .content-grid {
+            grid-template-columns: 1fr;
+        }
+        .event-title {
+            font-size: 1.5rem;
+        }
+        .stat-value {
+            font-size: 1.75rem;
+        }
+        .donut-chart-container {
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .progress-ring-container {
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .stats-grid {
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+        }
+        .stat-card {
+            padding: 1rem;
+        }
+        .stat-value {
+            font-size: 1.5rem;
+        }
+        .card {
+            padding: 1rem;
+        }
+        .event-analytics-container {
+            padding: 1rem 0.75rem;
+        }
+    }
+</style>
+
+<div class="event-analytics-container">
+    <div class="analytics-header">
+        <a href="{{ url_for('event_attendees', event_id=event.id) }}" class="back-link">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+            Back to Attendees
+        </a>
+        <h1 class="event-title">{{ event.name }}</h1>
+        <p class="event-subtitle">Event Analytics & Insights</p>
+    </div>
+    
+    <!-- Stats Cards -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon rsvps">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="9" cy="7" r="4"></circle>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                </svg>
+            </div>
+            <div class="stat-value">{{ total_rsvps }}</div>
+            <div class="stat-label">Total RSVPs</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon checkins">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+            </div>
+            <div class="stat-value">{{ checked_in_count }}</div>
+            <div class="stat-label">Checked In</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon rate">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="20" x2="12" y2="10"></line>
+                    <line x1="18" y1="20" x2="18" y2="4"></line>
+                    <line x1="6" y1="20" x2="6" y2="16"></line>
+                </svg>
+            </div>
+            <div class="stat-value">{{ check_in_rate }}%</div>
+            <div class="stat-label">Check-in Rate</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon returning">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                    <path d="M3 3v5h5"></path>
+                </svg>
+            </div>
+            <div class="stat-value">{{ returning_attendees }}</div>
+            <div class="stat-label">Returning</div>
+        </div>
+    </div>
+    
+    <!-- Check-in Progress -->
+    <div class="card" style="margin-bottom: 1.5rem;">
+        <h3 class="card-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 11l3 3L22 4"></path>
+                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+            </svg>
+            Check-in Progress
+        </h3>
+        <div class="progress-ring-container">
+            <div class="progress-ring">
+                <svg width="140" height="140">
+                    <defs>
+                        <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" style="stop-color:#22c55e" />
+                            <stop offset="100%" style="stop-color:#16a34a" />
+                        </linearGradient>
+                    </defs>
+                    <circle class="progress-ring-bg" cx="70" cy="70" r="58"></circle>
+                    <circle class="progress-ring-fill" cx="70" cy="70" r="58" 
+                            stroke-dasharray="{{ 364.4 }}" 
+                            stroke-dashoffset="{{ 364.4 - (364.4 * check_in_rate / 100) }}"></circle>
+                </svg>
+                <div class="progress-ring-center">
+                    <div class="progress-ring-value">{{ check_in_rate }}%</div>
+                    <div class="progress-ring-label">checked in</div>
+                </div>
+            </div>
+            <div class="progress-stats">
+                <div class="progress-stat checked">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                    <span>Checked In: <strong>{{ checked_in_count }}</strong></span>
+                </div>
+                <div class="progress-stat">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                    <span>Pending: <strong>{{ total_rsvps - checked_in_count }}</strong></span>
+                </div>
+                <div class="progress-stat">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                    </svg>
+                    <span>Total: <strong>{{ total_rsvps }}</strong></span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Charts Row -->
+    <div class="content-grid">
+        <!-- Registrations Timeline -->
+        <div class="card">
+            <h3 class="card-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                </svg>
+                Registrations Over Time
+            </h3>
+            {% if rsvps_by_day %}
+            <div class="bar-chart">
+                {% set max_count = rsvps_by_day|map(attribute=1)|max if rsvps_by_day else 1 %}
+                {% for day, count in rsvps_by_day[-14:] %}
+                <div class="bar-item">
+                    <div class="bar-value">{{ count }}</div>
+                    <div class="bar" style="height: {{ (count / max_count * 120) | int }}px;"></div>
+                    <div class="bar-label">{{ day[-5:] }}</div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">No registration data yet</div>
+            {% endif %}
+        </div>
+        
+        <!-- Attendee Breakdown by Status -->
+        <div class="card">
+            <h3 class="card-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path>
+                    <path d="M22 12A10 10 0 0 0 12 2v10z"></path>
+                </svg>
+                Attendee Breakdown
+            </h3>
+            {% if status_counts %}
+            {% set total = status_counts|map(attribute=1)|sum %}
+            <div class="donut-chart-container">
+                <div class="donut-chart" style="background: conic-gradient(
+                    {% set ns = namespace(offset=0) %}
+                    {% for status, count in status_counts %}
+                        {% if status == 'Student' %}#22c55e{% elif status == 'Working' %}#3b82f6{% else %}#6b7280{% endif %} {{ ns.offset }}deg {{ ns.offset + (count / total * 360) }}deg{% if not loop.last %},{% endif %}
+                        {% set ns.offset = ns.offset + (count / total * 360) %}
+                    {% endfor %}
+                );">
+                    <div class="donut-center">
+                        <span class="donut-center-value">{{ total }}</span>
+                        <span class="donut-center-label">Total</span>
+                    </div>
+                </div>
+                <div class="donut-legend">
+                    {% for status, count in status_counts %}
+                    <div class="legend-item">
+                        <div class="legend-color {{ status|lower if status else 'other' }}"></div>
+                        <span>{{ status or 'Other' }}: {{ count }} ({{ (count / total * 100) | round | int }}%)</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% else %}
+            <div class="empty-state">No attendee data yet</div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Second Row -->
+    <div class="content-grid">
+        <!-- New vs Returning -->
+        <div class="card">
+            <h3 class="card-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="8.5" cy="7" r="4"></circle>
+                    <line x1="20" y1="8" x2="20" y2="14"></line>
+                    <line x1="23" y1="11" x2="17" y2="11"></line>
+                </svg>
+                New vs Returning Attendees
+            </h3>
+            {% if total_rsvps > 0 %}
+            {% set total = new_attendees + returning_attendees %}
+            <div class="donut-chart-container">
+                <div class="donut-chart" style="background: conic-gradient(
+                    #06b6d4 0deg {{ (new_attendees / total * 360) }}deg,
+                    #a855f7 {{ (new_attendees / total * 360) }}deg 360deg
+                );">
+                    <div class="donut-center">
+                        <span class="donut-center-value">{{ total }}</span>
+                        <span class="donut-center-label">Total</span>
+                    </div>
+                </div>
+                <div class="donut-legend">
+                    <div class="legend-item">
+                        <div class="legend-color new"></div>
+                        <span>New: {{ new_attendees }} ({{ (new_attendees / total * 100) | round | int }}%)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color returning"></div>
+                        <span>Returning: {{ returning_attendees }} ({{ (returning_attendees / total * 100) | round | int }}%)</span>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="empty-state">No attendee data yet</div>
+            {% endif %}
+        </div>
+        
+        <!-- Recent RSVPs -->
+        <div class="card">
+            <h3 class="card-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+                Recent RSVPs
+            </h3>
+            {% if recent_rsvps %}
+            <div class="recent-list">
+                {% for a in recent_rsvps %}
+                <div class="recent-item">
+                    <div class="recent-avatar">{{ a.attendee.name[0]|upper if a.attendee.name else '?' }}</div>
+                    <div class="recent-info">
+                        <div class="recent-name">{{ a.attendee.name }}</div>
+                        <div class="recent-email">{{ a.attendee.email }}</div>
+                    </div>
+                    {% if a.checked_in %}
+                    <span class="recent-badge checked">Checked In</span>
+                    {% else %}
+                    <span class="recent-badge pending">Pending</span>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">No RSVPs yet</div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Check-ins by Hour (if any) -->
+    {% if checkins_by_hour %}
+    <div class="card">
+        <h3 class="card-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            Check-ins by Hour
+        </h3>
+        <div class="bar-chart">
+            {% set max_count = checkins_by_hour|map(attribute=1)|max if checkins_by_hour else 1 %}
+            {% for hour, count in checkins_by_hour %}
+            <div class="bar-item">
+                <div class="bar-value">{{ count }}</div>
+                <div class="bar checkin" style="height: {{ (count / max_count * 120) | int }}px;"></div>
+                <div class="bar-label">{{ hour }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

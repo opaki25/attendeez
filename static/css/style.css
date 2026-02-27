@@ -1,0 +1,114 @@
+:root{
+    --primary:#06b6d4;
+    --primary-400:#22d3ee;
+    --muted:#6b7280;
+    --card-bg:rgba(15,15,15,0.9);
+    --surface:#000000;
+    --border:rgba(255,255,255,0.08);
+}
+/* Custom styles for Attendly - Dark Theme */
+body {
+    padding-bottom: 60px;
+    background: var(--surface);
+    color: #e5e5e5;
+}
+
+.site-header{position:sticky;top:0;z-index:40}
+
+.card {
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    background: var(--card-bg);
+    backdrop-filter: blur(10px);
+}
+
+.card-img-top {
+    height: 180px;
+    object-fit: cover;
+    border-top-left-radius: 16px;
+    border-top-right-radius: 16px;
+}
+
+.card-body {
+    background: transparent;
+}
+
+.card-title {
+    color: #fff;
+}
+
+.card-text {
+    color: #9ca3af;
+}
+
+.btn-primary{
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-400) 100%);
+    border: none;
+    color: #000;
+    font-weight: 600;
+    box-shadow: 0 4px 15px rgba(6,182,212,0.25);
+}
+
+.btn-primary:hover{
+    background: linear-gradient(135deg, var(--primary-400) 0%, var(--primary) 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(6,182,212,0.35);
+}
+
+.hero {
+    padding: 48px 0;
+    background: linear-gradient(180deg, #000 0%, #0a0a0a 100%);
+    border-radius: 16px;
+    margin-bottom: 24px;
+    border: 1px solid var(--border);
+}
+
+.event-card-meta{font-size:0.9rem;color:var(--muted)}
+
+.form-control {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #fff;
+    border-radius: 12px;
+}
+
+.form-control:focus {
+    background: rgba(255,255,255,0.05);
+    border-color: var(--primary);
+    color: #fff;
+    box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.1);
+}
+
+.text-muted {
+    color: #6b7280 !important;
+}
+
+a {
+    color: var(--primary);
+}
+
+a:hover {
+    color: var(--primary-400);
+}
+
+h1, h2, h3, h4, h5, h6 {
+    color: #fff;
+}
+
+.table {
+    color: #e5e5e5;
+}
+
+.table thead th {
+    border-color: var(--border);
+    color: #9ca3af;
+}
+
+.table td, .table th {
+    border-color: var(--border);
+}
+
+@media (max-width:767px){
+    .card-img-top{height:140px}
+}
