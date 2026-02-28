@@ -17,6 +17,15 @@
     .hero-text {
         flex: 1;
         min-width: 280px;
+        opacity: 0;
+        transform: translateY(20px);
+        animation: heroFadeIn 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.2s forwards;
+    }
+    @keyframes heroFadeIn {
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
     .hero-title {
         font-family: 'Syne', sans-serif;
@@ -34,6 +43,9 @@
     .hero-actions {
         display: flex;
         gap: 1rem;
+        opacity: 0;
+        transform: translateY(20px);
+        animation: heroFadeIn 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.4s forwards;
     }
     .btn-hero {
         display: inline-flex;
@@ -47,13 +59,14 @@
         font-size: 0.95rem;
         font-weight: 500;
         text-decoration: none;
-        transition: all 0.2s ease;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
     .btn-hero:hover {
         background: rgba(6, 182, 212, 0.1);
         border-color: rgba(6, 182, 212, 0.3);
         color: #06b6d4;
         text-decoration: none;
+        transform: translateY(-2px);
     }
     .section-title {
         font-family: 'Syne', sans-serif;
@@ -74,23 +87,45 @@
         border: 1px solid rgba(255,255,255,0.1);
         border-radius: 20px;
         overflow: hidden;
-        transition: all 0.3s ease;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         text-align: center;
         box-shadow: 
             0 8px 32px rgba(0, 0, 0, 0.3),
             inset 0 1px 0 rgba(255, 255, 255, 0.1),
             inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+        opacity: 0;
+        transform: translateY(30px);
+        animation: cardFadeIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
     }
+    
+    @keyframes cardFadeIn {
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .event-card:nth-child(1) { animation-delay: 0.1s; }
+    .event-card:nth-child(2) { animation-delay: 0.2s; }
+    .event-card:nth-child(3) { animation-delay: 0.3s; }
+    .event-card:nth-child(4) { animation-delay: 0.4s; }
+    .event-card:nth-child(5) { animation-delay: 0.5s; }
+    .event-card:nth-child(6) { animation-delay: 0.6s; }
+    
     .event-card:hover {
         border-color: rgba(6, 182, 212, 0.3);
-        transform: translateY(-4px);
-        box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        transform: translateY(-8px) scale(1.02);
+        box-shadow: 0 25px 50px rgba(0,0,0,0.4), 0 0 30px rgba(6, 182, 212, 0.15);
         background: rgba(255, 255, 255, 0.06);
     }
     .event-poster {
         width: 100%;
         height: 180px;
         object-fit: cover;
+        transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .event-card:hover .event-poster {
+        transform: scale(1.05);
     }
     .event-poster-placeholder {
         width: 100%;
@@ -144,12 +179,13 @@
         font-weight: 500;
         text-decoration: none;
         text-align: center;
-        transition: all 0.2s ease;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
     .btn-details:hover {
         background: rgba(6, 182, 212, 0.2);
         color: #22d3ee;
         text-decoration: none;
+        transform: translateY(-2px);
     }
     .btn-attend {
         flex: 1;
@@ -162,12 +198,15 @@
         font-weight: 600;
         text-decoration: none;
         text-align: center;
-        transition: all 0.2s ease;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 4px 15px rgba(6, 182, 212, 0.25);
     }
     .btn-attend:hover {
         background: linear-gradient(135deg, #22d3ee 0%, #06b6d4 100%);
         color: #000;
         text-decoration: none;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(6, 182, 212, 0.35);
     }
     .empty-state {
         text-align: center;
