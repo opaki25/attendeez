@@ -283,7 +283,26 @@ def debug_rsvp_test(event_id):
             'traceback': traceback.format_exc()
         }), 500
 
-@app.route('/')
+@app.route('/debug/smtp')
+def debug_smtp():
+    """Debug endpoint to check SMTP configuration"""
+    smtp_host = os.environ.get('SMTP_HOST')
+    smtp_port = os.environ.get('SMTP_PORT')
+    smtp_user = os.environ.get('SMTP_USER')
+    smtp_pass = os.environ.get('SMTP_PASS')
+    
+    info = {
+        'smtp_host_set': bool(smtp_host),
+        'smtp_host_value': smtp_host[:20] + '...' if smtp_host and len(smtp_host) > 20 else smtp_host,
+        'smtp_port_set': bool(smtp_port),
+        'smtp_port_value': smtp_port,
+        'smtp_user_set': bool(smtp_user),
+        'smtp_user_preview': smtp_user[:5] + '***' if smtp_user else None,
+        'smtp_pass_set': bool(smtp_pass),
+        'smtp_pass_length': len(smtp_pass) if smtp_pass else 0,
+        'all_configured': all([smtp_host, smtp_port, smtp_user, smtp_pass])
+    }
+    return jsonify(info)@app.route('/')
 def index():
     events = Event.query.order_by(Event.datetime.asc()).all()
     return render_template('index.html', events=events)
@@ -899,6 +918,9 @@ def send_confirmation_email(attendee, event, attendance=None):
     smtp_port = int(os.environ.get('SMTP_PORT', 0) or 0)
     smtp_user = os.environ.get('SMTP_USER')
     smtp_pass = os.environ.get('SMTP_PASS')
+    
+    # Debug logging
+    app.logger.info(f"Email config - HOST: {bool(smtp_host)}, PORT: {smtp_port}, USER: {bool(smtp_user)}, PASS: {bool(smtp_pass)}")
     
     subject = f"🎉 You're confirmed for {event.name}!"
     
