@@ -507,17 +507,21 @@ def analytics_dashboard():
         Attendance.timestamp.desc()
     ).limit(10).all()
     
-    # Events by month (for chart)
-    events_by_month = db.session.query(
-        db.func.strftime('%Y-%m', Event.datetime).label('month'),
-        db.func.count(Event.id)
-    ).filter(Event.datetime.isnot(None)).group_by('month').order_by('month').all()
+    # Events by month (process in Python for DB compatibility)
+    all_events = Event.query.filter(Event.datetime.isnot(None)).all()
+    events_month_dict = {}
+    for e in all_events:
+        month = e.datetime.strftime('%Y-%m')
+        events_month_dict[month] = events_month_dict.get(month, 0) + 1
+    events_by_month = sorted(events_month_dict.items())
     
-    # RSVPs by month (for chart)
-    rsvps_by_month = db.session.query(
-        db.func.strftime('%Y-%m', Attendance.timestamp).label('month'),
-        db.func.count(Attendance.id)
-    ).group_by('month').order_by('month').all()
+    # RSVPs by month (process in Python for DB compatibility)
+    all_attendances = Attendance.query.filter(Attendance.timestamp.isnot(None)).all()
+    rsvps_month_dict = {}
+    for a in all_attendances:
+        month = a.timestamp.strftime('%Y-%m')
+        rsvps_month_dict[month] = rsvps_month_dict.get(month, 0) + 1
+    rsvps_by_month = sorted(rsvps_month_dict.items())
     
     return render_template('analytics.html',
         total_events=total_events,
@@ -563,20 +567,21 @@ def event_analytics(event_id):
         else:
             new_attendees += 1
     
-    # Registrations over time (by day)
-    rsvps_by_day = db.session.query(
-        db.func.strftime('%Y-%m-%d', Attendance.timestamp).label('day'),
-        db.func.count(Attendance.id)
-    ).filter(Attendance.event_id == event_id).group_by('day').order_by('day').all()
+    # Registrations over time (by day) - process in Python for DB compatibility
+    event_attendances = Attendance.query.filter_by(event_id=event_id).filter(Attendance.timestamp.isnot(None)).all()
+    rsvps_day_dict = {}
+    for a in event_attendances:
+        day = a.timestamp.strftime('%Y-%m-%d')
+        rsvps_day_dict[day] = rsvps_day_dict.get(day, 0) + 1
+    rsvps_by_day = sorted(rsvps_day_dict.items())
     
-    # Check-ins over time (by hour on event day)
-    checkins_by_hour = db.session.query(
-        db.func.strftime('%H:00', Attendance.check_in_time).label('hour'),
-        db.func.count(Attendance.id)
-    ).filter(
-        Attendance.event_id == event_id,
-        Attendance.checked_in == True
-    ).group_by('hour').order_by('hour').all()
+    # Check-ins over time (by hour) - process in Python for DB compatibility
+    checked_in_attendances = Attendance.query.filter_by(event_id=event_id, checked_in=True).filter(Attendance.check_in_time.isnot(None)).all()
+    checkins_hour_dict = {}
+    for a in checked_in_attendances:
+        hour = a.check_in_time.strftime('%H:00')
+        checkins_hour_dict[hour] = checkins_hour_dict.get(hour, 0) + 1
+    checkins_by_hour = sorted(checkins_hour_dict.items())
     
     # Recent activity for this event
     recent_rsvps = Attendance.query.filter_by(event_id=event_id).order_by(
@@ -715,17 +720,21 @@ def get_qr_code(token):
 @app.route('/api/analytics')
 def api_analytics():
     """Return analytics data for charts."""
-    # Events by month
-    events_by_month = db.session.query(
-        db.func.strftime('%Y-%m', Event.datetime).label('month'),
-        db.func.count(Event.id)
-    ).filter(Event.datetime.isnot(None)).group_by('month').order_by('month').all()
+    # Events by month - process in Python for DB compatibility
+    all_events = Event.query.filter(Event.datetime.isnot(None)).all()
+    events_month_dict = {}
+    for e in all_events:
+        month = e.datetime.strftime('%Y-%m')
+        events_month_dict[month] = events_month_dict.get(month, 0) + 1
+    events_by_month = sorted(events_month_dict.items())
     
-    # RSVPs by month
-    rsvps_by_month = db.session.query(
-        db.func.strftime('%Y-%m', Attendance.timestamp).label('month'),
-        db.func.count(Attendance.id)
-    ).group_by('month').order_by('month').all()
+    # RSVPs by month - process in Python for DB compatibility
+    all_attendances = Attendance.query.filter(Attendance.timestamp.isnot(None)).all()
+    rsvps_month_dict = {}
+    for a in all_attendances:
+        month = a.timestamp.strftime('%Y-%m')
+        rsvps_month_dict[month] = rsvps_month_dict.get(month, 0) + 1
+    rsvps_by_month = sorted(rsvps_month_dict.items())
     
     # Status breakdown
     status_counts = db.session.query(
