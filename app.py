@@ -302,7 +302,9 @@ def debug_smtp():
         'smtp_pass_length': len(smtp_pass) if smtp_pass else 0,
         'all_configured': all([smtp_host, smtp_port, smtp_user, smtp_pass])
     }
-    return jsonify(info)@app.route('/')
+    return jsonify(info)
+
+@app.route('/')
 def index():
     events = Event.query.order_by(Event.datetime.asc()).all()
     return render_template('index.html', events=events)
