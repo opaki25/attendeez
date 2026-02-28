@@ -237,6 +237,52 @@ def debug_supabase():
             info['bucket_error'] = str(e)
     return jsonify(info)
 
+@app.route('/debug/rsvp-test/<int:event_id>')
+def debug_rsvp_test(event_id):
+    """Debug endpoint to test RSVP functionality"""
+    try:
+        event = Event.query.get_or_404(event_id)
+        
+        # Test creating an attendee
+        test_email = f"test_{event_id}@debug.com"
+        attendee = Attendee.query.filter_by(email=test_email).first()
+        if not attendee:
+            attendee = Attendee(name="Test User", email=test_email, contact="123", status="Student")
+            db.session.add(attendee)
+            db.session.flush()
+        
+        # Check existing attendance
+        existing = Attendance.query.filter_by(event_id=event_id, attendee_id=attendee.id).first()
+        if existing:
+            return jsonify({
+                'success': True,
+                'message': 'Test attendee already exists',
+                'attendee_id': attendee.id,
+                'attendance_id': existing.id
+            })
+        
+        # Test creating attendance
+        attendance = Attendance(event_id=event_id, attendee_id=attendee.id)
+        attendance.generate_token()
+        db.session.add(attendance)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'RSVP test successful',
+            'attendee_id': attendee.id,
+            'attendance_id': attendance.id,
+            'token': attendance.check_in_token
+        })
+    except Exception as e:
+        db.session.rollback()
+        import traceback
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
+
 @app.route('/')
 def index():
     events = Event.query.order_by(Event.datetime.asc()).all()
