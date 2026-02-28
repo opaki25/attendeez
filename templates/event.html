@@ -200,7 +200,11 @@
         <div class="event-sidebar">
             <div class="event-card">
                 {% if event.poster %}
+                    {% if event.poster.startswith('http') %}
+                    <img src="{{ event.poster }}" alt="{{ event.name }}" class="event-poster">
+                    {% else %}
                     <img src="{{ url_for('static', filename='uploads/' + event.poster) }}" alt="{{ event.name }}" class="event-poster">
+                    {% endif %}
                 {% else %}
                     <div class="event-poster-placeholder">
                         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">

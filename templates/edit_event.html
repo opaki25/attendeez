@@ -393,8 +393,12 @@
                     <p class="file-name" id="fileName"></p>
                     {% if event.poster %}
                     <div class="current-poster">
-                        <span>Current poster: {{ event.poster }}</span><br>
+                        <span>Current poster</span><br>
+                        {% if event.poster.startswith('http') %}
+                        <img src="{{ event.poster }}" alt="Current poster">
+                        {% else %}
                         <img src="{{ url_for('static', filename='uploads/' + event.poster) }}" alt="Current poster">
+                        {% endif %}
                     </div>
                     {% endif %}
                 </div>

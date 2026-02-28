@@ -37,6 +37,13 @@ try:
 except ImportError:
     QRCODE_AVAILABLE = False
 
+# Optional: Supabase Storage for file uploads
+try:
+    from supabase import create_client
+    SUPABASE_AVAILABLE = True
+except ImportError:
+    SUPABASE_AVAILABLE = False
+
 # Load environment variables from .env file
 load_dotenv()
 
@@ -67,6 +74,46 @@ try:
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 except OSError:
     pass  # Ignore if can't create (read-only filesystem)
+
+# Supabase Storage setup
+supabase_client = None
+SUPABASE_BUCKET = 'event-images'
+if SUPABASE_AVAILABLE and os.environ.get('SUPABASE_URL') and os.environ.get('SUPABASE_KEY'):
+    try:
+        supabase_client = create_client(
+            os.environ.get('SUPABASE_URL'),
+            os.environ.get('SUPABASE_KEY')
+        )
+    except Exception as e:
+        print(f"Supabase client init failed: {e}")
+        supabase_client = None
+
+def upload_to_supabase(file_data, filename):
+    """Upload file to Supabase Storage and return public URL"""
+    if not supabase_client:
+        return None
+    try:
+        # Generate unique filename
+        ext = os.path.splitext(filename)[1]
+        unique_name = f"{uuid.uuid4()}{ext}"
+        
+        # Read file content
+        file_content = file_data.read()
+        file_data.seek(0)  # Reset for potential local save
+        
+        # Upload to Supabase Storage
+        result = supabase_client.storage.from_(SUPABASE_BUCKET).upload(
+            unique_name,
+            file_content,
+            {"content-type": file_data.content_type}
+        )
+        
+        # Get public URL
+        public_url = supabase_client.storage.from_(SUPABASE_BUCKET).get_public_url(unique_name)
+        return public_url
+    except Exception as e:
+        print(f"Supabase upload failed: {e}")
+        return None
 
 db = SQLAlchemy(app)
 CORS(app, supports_credentials=True)
@@ -235,17 +282,25 @@ def organizer_dashboard():
 def create_event():
     form = EventForm()
     if form.validate_on_submit():
-        filename = None
+        poster_value = None
         if form.poster.data:
             f = form.poster.data
-            filename = secure_filename(f.filename)
-            f.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            # Try Supabase Storage first (for production)
+            if supabase_client:
+                public_url = upload_to_supabase(f, f.filename)
+                if public_url:
+                    poster_value = public_url
+            # Fallback to local storage
+            if not poster_value:
+                filename = secure_filename(f.filename)
+                f.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                poster_value = filename
         event = Event(name=form.name.data,
                       description=form.description.data,
                       datetime=form.datetime.data,
                       end_datetime=form.end_datetime.data,
                       venue=form.venue.data,
-                      poster=filename)
+                      poster=poster_value)
         db.session.add(event)
         db.session.commit()
         flash('Event created successfully')
@@ -266,9 +321,16 @@ def edit_event(event_id):
         event.venue = form.venue.data
         if form.poster.data:
             f = form.poster.data
-            filename = secure_filename(f.filename)
-            f.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            event.poster = filename
+            # Try Supabase Storage first (for production)
+            if supabase_client:
+                public_url = upload_to_supabase(f, f.filename)
+                if public_url:
+                    event.poster = public_url
+            # Fallback to local storage
+            if not event.poster or not event.poster.startswith('http'):
+                filename = secure_filename(f.filename)
+                f.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                event.poster = filename
         db.session.commit()
         flash('Event updated successfully')
         return redirect(url_for('organizer_dashboard'))
