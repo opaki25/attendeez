@@ -1256,5 +1256,17 @@ try:
 except Exception as e:
     print(f"Database init error: {e}")
 
+# Global error handler for debugging (REMOVE IN PRODUCTION)
+@app.errorhandler(500)
+def handle_500(e):
+    import traceback
+    error_traceback = traceback.format_exc()
+    return f"""
+    <h1>Internal Server Error</h1>
+    <h2>Error: {str(e)}</h2>
+    <h3>Traceback:</h3>
+    <pre>{error_traceback}</pre>
+    """, 500
+
 if __name__ == '__main__':
     app.run(debug=True)
