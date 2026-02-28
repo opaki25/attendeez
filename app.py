@@ -84,35 +84,55 @@ if SUPABASE_AVAILABLE and os.environ.get('SUPABASE_URL') and os.environ.get('SUP
             os.environ.get('SUPABASE_URL'),
             os.environ.get('SUPABASE_KEY')
         )
+        print(f"Supabase client initialized for {os.environ.get('SUPABASE_URL')}")
     except Exception as e:
         print(f"Supabase client init failed: {e}")
         supabase_client = None
+else:
+    print(f"Supabase not configured - AVAILABLE:{SUPABASE_AVAILABLE}, URL:{bool(os.environ.get('SUPABASE_URL'))}, KEY:{bool(os.environ.get('SUPABASE_KEY'))}")
 
 def upload_to_supabase(file_data, filename):
     """Upload file to Supabase Storage and return public URL"""
     if not supabase_client:
+        print("Supabase client not initialized")
         return None
     try:
         # Generate unique filename
-        ext = os.path.splitext(filename)[1]
+        ext = os.path.splitext(filename)[1].lower()
         unique_name = f"{uuid.uuid4()}{ext}"
         
         # Read file content
         file_content = file_data.read()
         file_data.seek(0)  # Reset for potential local save
         
+        # Determine content type
+        content_type = getattr(file_data, 'content_type', 'image/jpeg')
+        if ext in ['.png']:
+            content_type = 'image/png'
+        elif ext in ['.gif']:
+            content_type = 'image/gif'
+        elif ext in ['.webp']:
+            content_type = 'image/webp'
+        
+        print(f"Uploading {unique_name} to Supabase Storage...")
+        
         # Upload to Supabase Storage
         result = supabase_client.storage.from_(SUPABASE_BUCKET).upload(
-            unique_name,
-            file_content,
-            {"content-type": file_data.content_type}
+            path=unique_name,
+            file=file_content,
+            file_options={"content-type": content_type}
         )
+        
+        print(f"Upload result: {result}")
         
         # Get public URL
         public_url = supabase_client.storage.from_(SUPABASE_BUCKET).get_public_url(unique_name)
+        print(f"Public URL: {public_url}")
         return public_url
     except Exception as e:
         print(f"Supabase upload failed: {e}")
+        import traceback
+        traceback.print_exc()
         return None
 
 db = SQLAlchemy(app)
@@ -196,6 +216,27 @@ class LoginForm(FlaskForm):
     submit = SubmitField('Login')
 
 # Routes
+@app.route('/debug/supabase')
+def debug_supabase():
+    """Debug endpoint to check Supabase configuration"""
+    info = {
+        'supabase_available': SUPABASE_AVAILABLE,
+        'supabase_url_set': bool(os.environ.get('SUPABASE_URL')),
+        'supabase_key_set': bool(os.environ.get('SUPABASE_KEY')),
+        'client_initialized': supabase_client is not None,
+        'bucket': SUPABASE_BUCKET
+    }
+    if supabase_client:
+        try:
+            # Try to list files in bucket
+            files = supabase_client.storage.from_(SUPABASE_BUCKET).list()
+            info['bucket_accessible'] = True
+            info['files_count'] = len(files) if files else 0
+        except Exception as e:
+            info['bucket_accessible'] = False
+            info['bucket_error'] = str(e)
+    return jsonify(info)
+
 @app.route('/')
 def index():
     events = Event.query.order_by(Event.datetime.asc()).all()
