@@ -27,13 +27,104 @@
             .brand-name {
                 font-family: 'Syne', sans-serif;
                 font-weight: 800;
-                background: linear-gradient(135deg, #22d3ee 0%, #06b6d4 50%, #0891b2 100%);
+                font-size: 1.6rem;
+                letter-spacing: 0.08em;
+                position: relative;
+                display: inline-block;
+                color: transparent;
+                background: linear-gradient(
+                    180deg,
+                    rgba(255, 255, 255, 0.95) 0%,
+                    rgba(200, 240, 255, 0.9) 25%,
+                    rgba(6, 182, 212, 0.85) 50%,
+                    rgba(8, 145, 178, 0.9) 75%,
+                    rgba(6, 182, 212, 0.95) 100%
+                );
                 -webkit-background-clip: text;
-                -webkit-text-fill-color: transparent;
                 background-clip: text;
-                filter: drop-shadow(0 0 20px rgba(6, 182, 212, 0.3));
-                font-size: 1.5rem;
-                letter-spacing: -0.02em;
+                text-shadow: 
+                    /* 3D depth layers */
+                    0 1px 0 rgba(255, 255, 255, 0.4),
+                    0 2px 0 rgba(6, 182, 212, 0.3),
+                    0 3px 0 rgba(8, 145, 178, 0.25),
+                    0 4px 0 rgba(6, 109, 128, 0.2),
+                    0 5px 0 rgba(0, 80, 100, 0.15),
+                    0 6px 0 rgba(0, 60, 80, 0.1),
+                    /* Soft shadow */
+                    0 8px 15px rgba(0, 0, 0, 0.4),
+                    0 12px 25px rgba(6, 182, 212, 0.2),
+                    /* Glow effect */
+                    0 0 20px rgba(6, 182, 212, 0.3),
+                    0 0 40px rgba(6, 182, 212, 0.15);
+                transform: perspective(500px) rotateX(5deg);
+                transform-style: preserve-3d;
+                animation: glassFloat 6s ease-in-out infinite;
+            }
+            
+            /* Glass reflection overlay */
+            .brand-name::before {
+                content: 'ATTENDEEZ';
+                position: absolute;
+                top: 0;
+                left: 0;
+                background: linear-gradient(
+                    180deg,
+                    rgba(255, 255, 255, 0.9) 0%,
+                    rgba(255, 255, 255, 0.6) 30%,
+                    transparent 60%
+                );
+                -webkit-background-clip: text;
+                background-clip: text;
+                color: transparent;
+                z-index: 1;
+                pointer-events: none;
+            }
+            
+            /* Shine sweep animation */
+            .brand-name::after {
+                content: '';
+                position: absolute;
+                top: -50%;
+                left: -100%;
+                width: 50%;
+                height: 200%;
+                background: linear-gradient(
+                    90deg,
+                    transparent 0%,
+                    rgba(255, 255, 255, 0.1) 40%,
+                    rgba(255, 255, 255, 0.4) 50%,
+                    rgba(255, 255, 255, 0.1) 60%,
+                    transparent 100%
+                );
+                transform: skewX(-20deg);
+                animation: glassSweep 4s ease-in-out infinite;
+                pointer-events: none;
+            }
+            
+            @keyframes glassFloat {
+                0%, 100% { 
+                    transform: perspective(500px) rotateX(5deg) translateY(0);
+                    filter: drop-shadow(0 8px 20px rgba(6, 182, 212, 0.25));
+                }
+                50% { 
+                    transform: perspective(500px) rotateX(3deg) translateY(-2px);
+                    filter: drop-shadow(0 12px 30px rgba(6, 182, 212, 0.35));
+                }
+            }
+            
+            @keyframes glassSweep {
+                0% { left: -100%; opacity: 0; }
+                20% { opacity: 1; }
+                80% { opacity: 1; }
+                100% { left: 200%; opacity: 0; }
+            }
+            
+            /* Hover effect for extra interactivity */
+            .brand-name:hover {
+                animation-play-state: paused;
+                transform: perspective(500px) rotateX(0deg) scale(1.02);
+                filter: drop-shadow(0 15px 35px rgba(6, 182, 212, 0.4));
+                transition: all 0.3s ease;
             }
             .site-header {
                 position: fixed;
