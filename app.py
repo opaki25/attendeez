@@ -255,34 +255,47 @@ def rsvp(event_id):
     attendee_id = request.form.get('attendee_id')
     if form.validate_on_submit():
         try:
-            # Check if this email already registered for this event
-            existing_attendee = Attendee.query.filter_by(email=form.email.data).first()
-            if existing_attendee:
-                existing_attendance = Attendance.query.filter_by(
-                    event_id=event_id,
-                    attendee_id=existing_attendee.id
-                ).first()
-                if existing_attendance:
-                    flash('You have already registered for this event!', 'danger')
-                    return render_template('rsvp.html', event=event, form=form)
+            attendee = None
             
+            # If returning attendee ID provided, try to load them
             if attendee_id:
                 attendee = Attendee.query.get(int(attendee_id))
-                # update contact/status if changed
-                attendee.name = form.name.data
-                attendee.email = form.email.data
-                attendee.contact = form.contact.data
-                attendee.status = form.status.data
-            else:
+                if attendee:
+                    # Update their info
+                    attendee.name = form.name.data
+                    attendee.email = form.email.data
+                    attendee.contact = form.contact.data
+                    attendee.status = form.status.data
+            
+            # If no attendee yet, try to find by email or create new
+            if not attendee:
                 attendee = Attendee.query.filter_by(email=form.email.data).first()
-                if not attendee:
+                if attendee:
+                    # Update existing attendee's info
+                    attendee.name = form.name.data
+                    attendee.contact = form.contact.data
+                    attendee.status = form.status.data
+                else:
+                    # Create new attendee
                     attendee = Attendee(name=form.name.data,
                                         email=form.email.data,
                                         contact=form.contact.data,
                                         status=form.status.data)
                     db.session.add(attendee)
-                    db.session.flush()  # Get ID before creating attendance
             
+            # Flush to ensure attendee has an ID
+            db.session.flush()
+            
+            # Check if already registered for this event
+            existing_attendance = Attendance.query.filter_by(
+                event_id=event_id,
+                attendee_id=attendee.id
+            ).first()
+            if existing_attendance:
+                flash('You have already registered for this event!', 'warning')
+                return render_template('rsvp.html', event=event, form=form)
+            
+            # Create attendance record
             attendance = Attendance(event_id=event_id, attendee_id=attendee.id)
             attendance.generate_token()  # Generate unique QR token
             db.session.add(attendance)
@@ -294,14 +307,14 @@ def rsvp(event_id):
             except Exception as email_err:
                 app.logger.warning(f"Email failed but RSVP succeeded: {email_err}")
             
-            flash('Attendance confirmed!')
+            flash('Attendance confirmed!', 'success')
             return redirect(url_for('confirm'))
         except Exception as e:
             db.session.rollback()
             app.logger.error(f"RSVP error: {e}")
             import traceback
             traceback.print_exc()
-            flash(f'An error occurred. Please try again.', 'danger')
+            flash('An error occurred. Please try again.', 'danger')
             return render_template('rsvp.html', event=event, form=form)
     return render_template('rsvp.html', event=event, form=form)
 
@@ -1121,48 +1134,74 @@ def api_event_detail(event_id):
 
 @app.route('/api/rsvp', methods=['POST'])
 def api_rsvp():
-    payload = request.get_json() or {}
-    event_id = payload.get('event_id')
-    if not event_id:
-        return jsonify({'error':'event_id required'}), 400
-    event = Event.query.get_or_404(int(event_id))
-    
-    # Check if this email already registered for this event
-    email = payload.get('email')
-    if email:
-        existing_attendee = Attendee.query.filter_by(email=email).first()
-        if existing_attendee:
-            existing_attendance = Attendance.query.filter_by(
-                event_id=int(event_id),
-                attendee_id=existing_attendee.id
-            ).first()
-            if existing_attendance:
-                return jsonify({'error': 'You have already registered for this event!'}), 400
-    
-    attendee_id = payload.get('attendee_id')
-    if attendee_id:
-        attendee = Attendee.query.get(int(attendee_id))
-        if not attendee:
-            return jsonify({'error':'attendee not found'}), 404
-        attendee.name = payload.get('name', attendee.name)
-        attendee.email = payload.get('email', attendee.email)
-        attendee.contact = payload.get('contact', attendee.contact)
-        attendee.status = payload.get('status', attendee.status)
-    else:
-        attendee = Attendee.query.filter_by(email=payload.get('email')).first()
-        if not attendee:
-            attendee = Attendee(name=payload.get('name'), email=payload.get('email'), contact=payload.get('contact'), status=payload.get('status'))
-            db.session.add(attendee)
-            db.session.flush()  # Get ID before creating attendance
-    attendance = Attendance(event_id=event.id, attendee_id=attendee.id)
-    attendance.generate_token()  # Generate unique QR token
-    db.session.add(attendance)
-    db.session.commit()
     try:
-        send_confirmation_email(attendee, event, attendance)
-    except Exception as email_err:
-        app.logger.warning(f"Email failed but API RSVP succeeded: {email_err}")
-    return jsonify({'success': True, 'attendance_id': attendance.id})
+        payload = request.get_json() or {}
+        event_id = payload.get('event_id')
+        if not event_id:
+            return jsonify({'error':'event_id required'}), 400
+        event = Event.query.get_or_404(int(event_id))
+        
+        attendee = None
+        email = payload.get('email')
+        attendee_id = payload.get('attendee_id')
+        
+        # If attendee_id provided, try to load them
+        if attendee_id:
+            attendee = Attendee.query.get(int(attendee_id))
+            if attendee:
+                attendee.name = payload.get('name', attendee.name)
+                attendee.email = payload.get('email', attendee.email)
+                attendee.contact = payload.get('contact', attendee.contact)
+                attendee.status = payload.get('status', attendee.status)
+        
+        # If no attendee yet, try to find by email or create new
+        if not attendee and email:
+            attendee = Attendee.query.filter_by(email=email).first()
+            if attendee:
+                # Update existing attendee's info
+                attendee.name = payload.get('name', attendee.name)
+                attendee.contact = payload.get('contact', attendee.contact)
+                attendee.status = payload.get('status', attendee.status)
+            else:
+                # Create new attendee
+                attendee = Attendee(
+                    name=payload.get('name'),
+                    email=email,
+                    contact=payload.get('contact'),
+                    status=payload.get('status')
+                )
+                db.session.add(attendee)
+        
+        if not attendee:
+            return jsonify({'error': 'email or attendee_id required'}), 400
+        
+        # Flush to ensure attendee has an ID
+        db.session.flush()
+        
+        # Check if already registered for this event
+        existing_attendance = Attendance.query.filter_by(
+            event_id=int(event_id),
+            attendee_id=attendee.id
+        ).first()
+        if existing_attendance:
+            return jsonify({'error': 'You have already registered for this event!'}), 400
+        
+        # Create attendance record
+        attendance = Attendance(event_id=event.id, attendee_id=attendee.id)
+        attendance.generate_token()  # Generate unique QR token
+        db.session.add(attendance)
+        db.session.commit()
+        
+        try:
+            send_confirmation_email(attendee, event, attendance)
+        except Exception as email_err:
+            app.logger.warning(f"Email failed but API RSVP succeeded: {email_err}")
+        
+        return jsonify({'success': True, 'attendance_id': attendance.id})
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"API RSVP error: {e}")
+        return jsonify({'error': 'An error occurred. Please try again.'}), 500
 
 # Create tables on startup (for Vercel serverless)
 try:
