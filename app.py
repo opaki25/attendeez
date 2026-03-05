@@ -620,38 +620,57 @@ def reset_password(token):
 @login_required
 def my_events():
     """Show events created by the current user."""
-    events = current_user.events.order_by(Event.datetime.desc()).all()
-    return render_template('my_events.html', events=events)
+    now = datetime.utcnow()
+    all_events = current_user.events.all()
+    
+    # Separate current and past events
+    current_events = [e for e in all_events if e.datetime is None or e.datetime >= now]
+    past_events = [e for e in all_events if e.datetime is not None and e.datetime < now]
+    
+    # Sort: current by date ascending, past by date descending
+    current_events.sort(key=lambda e: e.datetime or datetime.max)
+    past_events.sort(key=lambda e: e.datetime, reverse=True)
+    
+    return render_template('my_events.html', current_events=current_events, past_events=past_events)
 
 @app.route('/my-rsvps')
 @login_required
 def my_rsvps():
     """Show events the user has RSVP'd to."""
+    now = datetime.utcnow()
     # Find attendee profile linked to user
     attendee = Attendee.query.filter_by(user_id=current_user.id).first()
-    rsvps = []
+    current_rsvps = []
+    past_rsvps = []
+    
     if attendee:
         # Filter out attendances where event might be deleted
-        rsvps = [a for a in attendee.attendances if a.event is not None]
-    return render_template('my_rsvps.html', rsvps=rsvps)
+        all_rsvps = [a for a in attendee.attendances if a.event is not None]
+        
+        # Separate current and past RSVPs based on event datetime
+        for rsvp in all_rsvps:
+            if rsvp.event.datetime is None or rsvp.event.datetime >= now:
+                current_rsvps.append(rsvp)
+            else:
+                past_rsvps.append(rsvp)
+        
+        # Sort: current by date ascending, past by date descending
+        current_rsvps.sort(key=lambda r: r.event.datetime or datetime.max)
+        past_rsvps.sort(key=lambda r: r.event.datetime, reverse=True)
+    
+    return render_template('my_rsvps.html', current_rsvps=current_rsvps, past_rsvps=past_rsvps)
 
 @app.route('/')
 def index():
     now = datetime.utcnow()
-    # Get upcoming events (soonest first) - handle NULL datetimes
-    upcoming_events = Event.query.filter(
+    # Only show upcoming events on homepage (soonest first)
+    events = Event.query.filter(
         Event.datetime != None,
         Event.datetime >= now
     ).order_by(Event.datetime.asc()).all()
-    # Get past events (most recent first)
-    past_events = Event.query.filter(
-        Event.datetime != None,
-        Event.datetime < now
-    ).order_by(Event.datetime.desc()).all()
-    # Get events with no datetime set
+    # Also include events with no datetime set
     no_date_events = Event.query.filter(Event.datetime == None).all()
-    # Combine: upcoming first, then past, then no date
-    events = upcoming_events + past_events + no_date_events
+    events = events + no_date_events
     return render_template('index.html', events=events)
 
 @app.route('/event/<int:event_id>')
