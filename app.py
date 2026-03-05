@@ -151,7 +151,7 @@ try:
         access_token_url='https://accounts.google.com/o/oauth2/token',
         authorize_url='https://accounts.google.com/o/oauth2/auth',
         api_base_url='https://www.googleapis.com/oauth2/v1/',
-        client_kwargs={'scope': 'email profile'},
+        client_kwargs={'scope': 'email profile', 'prompt': 'select_account'},
         server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
     )
     GOOGLE_OAUTH_AVAILABLE = bool(os.environ.get('GOOGLE_CLIENT_ID') and os.environ.get('GOOGLE_CLIENT_SECRET'))
