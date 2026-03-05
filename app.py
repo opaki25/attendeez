@@ -481,18 +481,13 @@ def my_events():
 @login_required
 def my_rsvps():
     """Show events the user has RSVP'd to."""
-    try:
-        # Find attendee profile linked to user
-        attendee = Attendee.query.filter_by(user_id=current_user.id).first()
-        rsvps = []
-        if attendee:
-            # Filter out attendances where event might be deleted
-            rsvps = [a for a in attendee.attendances if a.event is not None]
-        return render_template('my_rsvps.html', rsvps=rsvps)
-    except Exception as e:
-        app.logger.error(f"My RSVPs error: {e}")
-        flash('Error loading your RSVPs. Please try again.', 'danger')
-        return render_template('my_rsvps.html', rsvps=[])
+    # Find attendee profile linked to user
+    attendee = Attendee.query.filter_by(user_id=current_user.id).first()
+    rsvps = []
+    if attendee:
+        # Filter out attendances where event might be deleted
+        rsvps = [a for a in attendee.attendances if a.event is not None]
+    return render_template('my_rsvps.html', rsvps=rsvps)
 
 @app.route('/')
 def index():
