@@ -208,11 +208,11 @@
             <p class="login-subtitle">Enter the passcode for <span class="event-name">{{ event.name }}</span></p>
         </div>
         
-        <form method="POST">
+        <form method="POST" autocomplete="off">
             {{ form.hidden_tag() }}
             <div class="form-group">
                 {{ form.passcode.label(class_='form-label') }}
-                {{ form.passcode(class_='form-input', placeholder='Enter passcode') }}
+                {{ form.passcode(class_='form-input', placeholder='Enter passcode', autocomplete='off') }}
             </div>
             <button type="submit" class="btn-login">Access Dashboard</button>
         </form>

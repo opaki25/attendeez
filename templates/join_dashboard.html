@@ -16,12 +16,12 @@
                     <p class="text-muted mb-0">Enter the passcode shared by your team to access the event dashboard</p>
                 </div>
                 
-                <form method="POST" action="{{ url_for('join_dashboard') }}">
+                <form method="POST" action="{{ url_for('join_dashboard') }}" autocomplete="off">
                     {{ form.hidden_tag() }}
                     
                     <div class="mb-4">
                         <label class="form-label small text-muted mb-2">Event Passcode</label>
-                        {{ form.passcode(class="form-control", placeholder="Enter the event passcode", style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); color: #fff; border-radius: 12px; padding: 0.875rem 1rem; font-size: 1rem;") }}
+                        {{ form.passcode(class="form-control", placeholder="Enter the event passcode", autocomplete="off", style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); color: #fff; border-radius: 12px; padding: 0.875rem 1rem; font-size: 1rem;") }}
                         {% if form.passcode.errors %}
                             <small class="text-danger">{{ form.passcode.errors[0] }}</small>
                         {% endif %}
