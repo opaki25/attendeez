@@ -1571,8 +1571,33 @@ def api_rsvp():
 try:
     with app.app_context():
         db.create_all()
+        
+        # Run migrations for new columns on existing tables
+        from sqlalchemy import text, inspect
+        inspector = inspect(db.engine)
+        
+        # Check and add columns to event table
+        if 'event' in inspector.get_table_names():
+            event_columns = [col['name'] for col in inspector.get_columns('event')]
+            if 'creator_id' not in event_columns:
+                db.session.execute(text('ALTER TABLE event ADD COLUMN creator_id INTEGER'))
+                print('Added creator_id column to event')
+            if 'passcode' not in event_columns:
+                db.session.execute(text('ALTER TABLE event ADD COLUMN passcode VARCHAR(64)'))
+                print('Added passcode column to event')
+        
+        # Check and add columns to attendance table
+        if 'attendance' in inspector.get_table_names():
+            att_columns = [col['name'] for col in inspector.get_columns('attendance')]
+            if 'user_id' not in att_columns:
+                db.session.execute(text('ALTER TABLE attendance ADD COLUMN user_id INTEGER'))
+                print('Added user_id column to attendance')
+        
+        db.session.commit()
 except Exception as e:
     print(f"Database init error: {e}")
+    import traceback
+    traceback.print_exc()
 
 # Global error handler for debugging (REMOVE IN PRODUCTION)
 @app.errorhandler(500)
