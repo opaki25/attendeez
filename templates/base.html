@@ -360,7 +360,10 @@
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
-                    <div class="alert alert-{{ category }} mb-4 text-center">{{ message }}</div>
+                    <div class="alert alert-{{ category }} mb-4 text-center alert-dismissible" style="position: relative;">
+                        {{ message }}
+                        <button type="button" class="close-alert" onclick="this.parentElement.remove()" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: inherit; opacity: 0.6; cursor: pointer; padding: 4px; font-size: 1.25rem; line-height: 1;">&times;</button>
+                    </div>
                 {% endfor %}
             {% endif %}
         {% endwith %}
@@ -500,6 +503,23 @@
     // Close when clicking a link inside the menu
     mobileNav.querySelectorAll('a').forEach(link => {
         link.addEventListener('click', closeMenu);
+    });
+})();
+
+// Auto-dismiss alerts after 5 seconds
+(function() {
+    const alerts = document.querySelectorAll('.alert-dismissible');
+    alerts.forEach(function(alert) {
+        // Add transition for smooth fade out
+        alert.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+        
+        setTimeout(function() {
+            alert.style.opacity = '0';
+            alert.style.transform = 'translateY(-10px)';
+            setTimeout(function() {
+                alert.remove();
+            }, 400);
+        }, 5000);
     });
 })();
 </script>
