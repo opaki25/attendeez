@@ -1194,19 +1194,6 @@ def event_analytics(event_id):
         status_counts[status] = status_counts.get(status, 0) + 1
     status_list = [(k, v) for k, v in status_counts.items()]
     
-    # New vs returning attendees
-    new_attendees = 0
-    returning_attendees = 0
-    for a in event.attendances:
-        prior = Attendance.query.filter(
-            Attendance.attendee_id == a.attendee_id,
-            Attendance.timestamp < a.timestamp
-        ).count()
-        if prior > 0:
-            returning_attendees += 1
-        else:
-            new_attendees += 1
-    
     # Registrations over time (by day) - process in Python for DB compatibility
     event_attendances = Attendance.query.filter_by(event_id=event_id).filter(Attendance.timestamp.isnot(None)).all()
     rsvps_day_dict = {}
@@ -1234,8 +1221,6 @@ def event_analytics(event_id):
         checked_in_count=checked_in_count,
         check_in_rate=check_in_rate,
         status_counts=status_list,
-        new_attendees=new_attendees,
-        returning_attendees=returning_attendees,
         rsvps_by_day=rsvps_by_day,
         checkins_by_hour=checkins_by_hour,
         recent_rsvps=recent_rsvps
@@ -1849,17 +1834,6 @@ We're excited to see you there!
     else:
         # not configured — print to console for development
         print(f"[EMAIL] To: {attendee.email}\nSubject: {subject}\n\n{plain_body}")
-
-
-@app.route('/search_attendee')
-def search_attendee():
-    term = request.args.get('q', '')
-    if not term:
-        return {'results': []}
-    like = f"%{term}%"
-    matches = Attendee.query.filter(Attendee.name.ilike(like)).limit(10).all()
-    data = [{'id':a.id,'name':a.name,'email':a.email,'contact':a.contact,'status':a.status} for a in matches]
-    return {'results': data}
 
 
 @app.route('/api/events')

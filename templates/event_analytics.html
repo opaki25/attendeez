@@ -68,7 +68,6 @@
     .stat-icon.rsvps { background: rgba(6, 182, 212, 0.15); color: #06b6d4; }
     .stat-icon.checkins { background: rgba(34, 197, 94, 0.15); color: #22c55e; }
     .stat-icon.rate { background: rgba(249, 115, 22, 0.15); color: #f97316; }
-    .stat-icon.returning { background: rgba(168, 85, 247, 0.15); color: #a855f7; }
     .stat-value {
         font-family: 'Syne', sans-serif;
         font-size: 2rem;
@@ -220,8 +219,6 @@
     .legend-color.student { background: #22c55e; }
     .legend-color.working { background: #3b82f6; }
     .legend-color.other { background: #6b7280; }
-    .legend-color.new { background: #06b6d4; }
-    .legend-color.returning { background: #a855f7; }
     
     /* Progress Ring */
     .progress-ring-container {
@@ -446,16 +443,6 @@
             <div class="stat-value">{{ check_in_rate }}%</div>
             <div class="stat-label">Check-in Rate</div>
         </div>
-        <div class="stat-card">
-            <div class="stat-icon returning">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
-                    <path d="M3 3v5h5"></path>
-                </svg>
-            </div>
-            <div class="stat-value">{{ returning_attendees }}</div>
-            <div class="stat-label">Returning</div>
-        </div>
     </div>
     
     <!-- Check-in Progress -->
@@ -578,45 +565,6 @@
     
     <!-- Second Row -->
     <div class="content-grid">
-        <!-- New vs Returning -->
-        <div class="card">
-            <h3 class="card-title">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                    <circle cx="8.5" cy="7" r="4"></circle>
-                    <line x1="20" y1="8" x2="20" y2="14"></line>
-                    <line x1="23" y1="11" x2="17" y2="11"></line>
-                </svg>
-                New vs Returning Attendees
-            </h3>
-            {% if total_rsvps > 0 %}
-            {% set total = new_attendees + returning_attendees %}
-            <div class="donut-chart-container">
-                <div class="donut-chart" style="background: conic-gradient(
-                    #06b6d4 0deg {{ (new_attendees / total * 360) }}deg,
-                    #a855f7 {{ (new_attendees / total * 360) }}deg 360deg
-                );">
-                    <div class="donut-center">
-                        <span class="donut-center-value">{{ total }}</span>
-                        <span class="donut-center-label">Total</span>
-                    </div>
-                </div>
-                <div class="donut-legend">
-                    <div class="legend-item">
-                        <div class="legend-color new"></div>
-                        <span>New: {{ new_attendees }} ({{ (new_attendees / total * 100) | round | int }}%)</span>
-                    </div>
-                    <div class="legend-item">
-                        <div class="legend-color returning"></div>
-                        <span>Returning: {{ returning_attendees }} ({{ (returning_attendees / total * 100) | round | int }}%)</span>
-                    </div>
-                </div>
-            </div>
-            {% else %}
-            <div class="empty-state">No attendee data yet</div>
-            {% endif %}
-        </div>
-        
         <!-- Recent RSVPs -->
         <div class="card">
             <h3 class="card-title">

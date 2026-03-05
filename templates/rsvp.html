@@ -95,62 +95,6 @@
         color: #111;
         padding: 0.75rem;
     }
-    .type-selector {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 0.75rem;
-        margin-bottom: 1.5rem;
-    }
-    .type-option {
-        padding: 0.875rem 1rem;
-        background: rgba(255,255,255,0.03);
-        border: 1px solid rgba(255,255,255,0.1);
-        border-radius: 12px;
-        color: #9ca3af;
-        font-size: 0.95rem;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        text-align: center;
-    }
-    .type-option:hover {
-        border-color: rgba(6, 182, 212, 0.3);
-        color: #fff;
-    }
-    .type-option.active {
-        background: rgba(6, 182, 212, 0.1);
-        border-color: #06b6d4;
-        color: #06b6d4;
-    }
-    .search-section {
-        margin-bottom: 1.5rem;
-        display: none;
-    }
-    .search-section.visible {
-        display: block;
-    }
-    .search-results {
-        margin-top: 0.5rem;
-        background: rgba(0,0,0,0.5);
-        border: 1px solid rgba(255,255,255,0.1);
-        border-radius: 8px;
-        overflow: hidden;
-    }
-    .search-result-item {
-        display: block;
-        padding: 0.75rem 1rem;
-        color: #d1d5db;
-        text-decoration: none;
-        border-bottom: 1px solid rgba(255,255,255,0.05);
-        transition: all 0.2s ease;
-    }
-    .search-result-item:last-child {
-        border-bottom: none;
-    }
-    .search-result-item:hover {
-        background: rgba(6, 182, 212, 0.1);
-        color: #fff;
-        text-decoration: none;
-    }
     .btn-submit {
         width: 100%;
         padding: 1rem;
@@ -179,9 +123,6 @@
         .rsvp-title {
             font-size: 1.25rem;
         }
-        .type-selector {
-            grid-template-columns: 1fr;
-        }
     }
     @media (max-width: 480px) {
         .rsvp-container {
@@ -201,10 +142,6 @@
             padding: 0.75rem 0.875rem;
             font-size: 0.9rem;
         }
-        .type-option {
-            padding: 0.75rem;
-            font-size: 0.85rem;
-        }
         .btn-submit {
             padding: 0.875rem;
             font-size: 0.9rem;
@@ -222,24 +159,10 @@
     
     <div class="rsvp-card">
         <h1 class="rsvp-title">RSVP for <span class="rsvp-event-name">{{ event.name }}</span></h1>
-        <p class="rsvp-subtitle">Select if you're new or returning, then fill in your details</p>
-        
-        <div class="type-selector">
-            <div class="type-option active" data-type="new">New Attendee</div>
-            <div class="type-option" data-type="returning">Returning Attendee</div>
-        </div>
+        <p class="rsvp-subtitle">Fill in your details to confirm your attendance</p>
         
         <form method="POST" enctype="multipart/form-data" id="rsvp-form">
             {{ form.hidden_tag() }}
-            <input type="hidden" name="attendee_id" id="attendee_id" />
-            
-            <div id="returning-search" class="search-section">
-                <div class="form-group">
-                    <label class="form-label">Search your name</label>
-                    <input type="text" id="search-name" class="form-input" placeholder="Start typing your name...">
-                    <div id="search-results" class="search-results" style="display: none;"></div>
-                </div>
-            </div>
             
             <div class="form-group">
                 <label class="form-label">Full Name</label>
@@ -261,65 +184,4 @@
         </form>
     </div>
 </div>
-
-<script>
-// Type selector toggle
-const typeOptions = document.querySelectorAll('.type-option');
-const searchSection = document.getElementById('returning-search');
-
-typeOptions.forEach(option => {
-    option.addEventListener('click', function() {
-        typeOptions.forEach(o => o.classList.remove('active'));
-        this.classList.add('active');
-        
-        if (this.dataset.type === 'returning') {
-            searchSection.classList.add('visible');
-        } else {
-            searchSection.classList.remove('visible');
-            document.getElementById('attendee_id').value = '';
-        }
-    });
-});
-
-// Search functionality
-document.getElementById('search-name').addEventListener('input', function() {
-    const q = this.value;
-    const resultsContainer = document.getElementById('search-results');
-    
-    if (q.length < 2) {
-        resultsContainer.style.display = 'none';
-        resultsContainer.innerHTML = '';
-        return;
-    }
-    
-    fetch('/search_attendee?q=' + encodeURIComponent(q))
-        .then(r => r.json())
-        .then(data => {
-            resultsContainer.innerHTML = '';
-            if (data.results.length > 0) {
-                resultsContainer.style.display = 'block';
-                data.results.forEach(a => {
-                    const item = document.createElement('a');
-                    item.href = '#';
-                    item.className = 'search-result-item';
-                    item.textContent = a.name + ' (' + a.email + ')';
-                    item.addEventListener('click', function(e) {
-                        e.preventDefault();
-                        document.getElementById('attendee_id').value = a.id;
-                        document.getElementById('search-name').value = '';
-                        resultsContainer.style.display = 'none';
-                        resultsContainer.innerHTML = '';
-                        document.getElementById('rsvp-form').elements['name'].value = a.name;
-                        document.getElementById('rsvp-form').elements['email'].value = a.email;
-                        document.getElementById('rsvp-form').elements['contact'].value = a.contact;
-                        document.getElementById('rsvp-form').elements['status'].value = a.status;
-                    });
-                    resultsContainer.appendChild(item);
-                });
-            } else {
-                resultsContainer.style.display = 'none';
-            }
-        });
-});
-</script>
 {% endblock %}
