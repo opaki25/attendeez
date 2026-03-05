@@ -691,8 +691,8 @@ def rsvp(event_id):
                     else:
                         # Create new attendee
                         attendee = Attendee(
-                            name=form.name.data or current_user.name,
-                            email=current_user.email,
+                            name=form.name.data or current_user.name or 'Guest',
+                            email=current_user.email or '',
                             contact=form.contact.data or '',
                             status=form.status.data or 'Other',
                             user_id=current_user.id
@@ -700,12 +700,12 @@ def rsvp(event_id):
                         db.session.add(attendee)
                 
                 # Update attendee info
-                attendee.name = form.name.data or current_user.name
+                attendee.name = form.name.data or current_user.name or 'Guest'
                 attendee.contact = form.contact.data or ''
                 attendee.status = form.status.data or 'Other'
                 
-                # Flush to ensure attendee has an ID
-                db.session.flush()
+                # Commit the attendee first to get an ID
+                db.session.commit()
                 
                 # Check if already registered for this event
                 existing_attendance = Attendance.query.filter_by(
@@ -732,10 +732,10 @@ def rsvp(event_id):
                 return redirect(url_for('confirm'))
             except Exception as e:
                 db.session.rollback()
-                app.logger.error(f"RSVP submit error: {e}")
+                app.logger.error(f"RSVP submit error: {type(e).__name__}: {e}")
                 import traceback
                 traceback.print_exc()
-                flash('An error occurred. Please try again.', 'danger')
+                flash(f'An error occurred: {type(e).__name__}. Please try again.', 'danger')
                 return render_template('rsvp.html', event=event, form=form)
         return render_template('rsvp.html', event=event, form=form)
     except Exception as e:
