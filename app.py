@@ -140,6 +140,27 @@ CORS(app, supports_credentials=True)
 login_manager = LoginManager(app)
 login_manager.login_view = 'user_login'
 
+# Google OAuth Setup
+try:
+    from authlib.integrations.flask_client import OAuth
+    oauth = OAuth(app)
+    google = oauth.register(
+        name='google',
+        client_id=os.environ.get('GOOGLE_CLIENT_ID'),
+        client_secret=os.environ.get('GOOGLE_CLIENT_SECRET'),
+        access_token_url='https://accounts.google.com/o/oauth2/token',
+        authorize_url='https://accounts.google.com/o/oauth2/auth',
+        api_base_url='https://www.googleapis.com/oauth2/v1/',
+        client_kwargs={'scope': 'email profile'},
+        server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+    )
+    GOOGLE_OAUTH_AVAILABLE = bool(os.environ.get('GOOGLE_CLIENT_ID') and os.environ.get('GOOGLE_CLIENT_SECRET'))
+except ImportError:
+    oauth = None
+    google = None
+    GOOGLE_OAUTH_AVAILABLE = False
+    print('Authlib not installed - Google OAuth disabled')
+
 # Models
 class User(UserMixin, db.Model):
     """Regular user account for signup/login"""
@@ -401,10 +422,10 @@ def user_login():
             user = User.query.filter_by(email=form.email.data.lower()).first()
             if user is None:
                 flash('No account found with this email. Please create an account first.', 'warning')
-                return render_template('user_login.html', form=form)
+                return render_template('user_login.html', form=form, google_oauth_available=GOOGLE_OAUTH_AVAILABLE)
             if not user.check_password(form.password.data):
                 flash('Incorrect password. Please try again or reset your password.', 'danger')
-                return render_template('user_login.html', form=form)
+                return render_template('user_login.html', form=form, google_oauth_available=GOOGLE_OAUTH_AVAILABLE)
             login_user(user)
             flash('Welcome back!', 'success')
             next_page = request.args.get('next')
@@ -412,7 +433,7 @@ def user_login():
         except Exception as e:
             app.logger.error(f"Login error: {e}")
             flash('An error occurred during login. Please try again.', 'danger')
-    return render_template('user_login.html', form=form)
+    return render_template('user_login.html', form=form, google_oauth_available=GOOGLE_OAUTH_AVAILABLE)
 
 @app.route('/logout')
 @login_required
@@ -420,6 +441,123 @@ def user_logout():
     logout_user()
     flash('You have been logged out.', 'info')
     return redirect(url_for('index'))
+
+# Google OAuth Routes
+@app.route('/login/google')
+def google_login():
+    if not GOOGLE_OAUTH_AVAILABLE or not google:
+        flash('Google login is not configured.', 'warning')
+        return redirect(url_for('user_login'))
+    redirect_uri = url_for('google_callback', _external=True)
+    return google.authorize_redirect(redirect_uri)
+
+@app.route('/login/google/callback')
+def google_callback():
+    if not GOOGLE_OAUTH_AVAILABLE or not google:
+        flash('Google login is not configured.', 'warning')
+        return redirect(url_for('user_login'))
+    
+    try:
+        token = google.authorize_access_token()
+        resp = google.get('userinfo')
+        user_info = resp.json()
+        
+        email = user_info.get('email', '').lower()
+        name = user_info.get('name', email.split('@')[0])
+        
+        if not email:
+            flash('Could not get email from Google.', 'danger')
+            return redirect(url_for('user_login'))
+        
+        # Check if user exists
+        user = User.query.filter_by(email=email).first()
+        
+        if not user:
+            # Create new user account
+            user = User(name=name, email=email)
+            # Set a random password since they're using Google login
+            user.set_password(uuid.uuid4().hex)
+            db.session.add(user)
+            db.session.commit()
+            flash('Account created with Google! Welcome to Attendeez.', 'success')
+        
+        login_user(user)
+        flash('Welcome back!', 'success')
+        
+        next_page = request.args.get('next')
+        return redirect(next_page or url_for('index'))
+        
+    except Exception as e:
+        app.logger.error(f"Google OAuth error: {e}")
+        flash('An error occurred during Google login. Please try again.', 'danger')
+        return redirect(url_for('user_login'))
+
+def send_password_reset_email(user, token):
+    """Send password reset email to user"""
+    smtp_host = os.environ.get('SMTP_HOST', 'smtp.gmail.com')
+    smtp_port = int(os.environ.get('SMTP_PORT', 587))
+    smtp_user = os.environ.get('SMTP_USER')
+    smtp_pass = os.environ.get('SMTP_PASS')
+    
+    if not smtp_user or not smtp_pass:
+        print(f"[EMAIL] SMTP not configured. Reset link for {user.email}: /reset-password/{token}")
+        return False
+    
+    try:
+        reset_url = url_for('reset_password', token=token, _external=True)
+        
+        subject = "Reset Your Attendeez Password"
+        html_body = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="text-align: center; margin-bottom: 30px;">
+                <h1 style="color: #06b6d4; margin: 0;">ATTENDEEZ</h1>
+            </div>
+            <div style="background: #1a1a2e; border-radius: 12px; padding: 30px; color: #ffffff;">
+                <h2 style="color: #ffffff; margin-top: 0;">Password Reset Request</h2>
+                <p style="color: #9ca3af;">Hi {user.name},</p>
+                <p style="color: #9ca3af;">We received a request to reset your password. Click the button below to create a new password:</p>
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="{reset_url}" style="background: linear-gradient(135deg, #06b6d4 0%, #22d3ee 100%); color: #000; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; display: inline-block;">Reset Password</a>
+                </div>
+                <p style="color: #6b7280; font-size: 14px;">This link will expire in 1 hour.</p>
+                <p style="color: #6b7280; font-size: 14px;">If you didn't request a password reset, you can safely ignore this email.</p>
+                <hr style="border: none; border-top: 1px solid #374151; margin: 20px 0;">
+                <p style="color: #6b7280; font-size: 12px;">If the button doesn't work, copy and paste this link into your browser:</p>
+                <p style="color: #06b6d4; font-size: 12px; word-break: break-all;">{reset_url}</p>
+            </div>
+        </div>
+        """
+        plain_body = f"""Hi {user.name},
+
+We received a request to reset your Attendeez password.
+
+Click this link to reset your password: {reset_url}
+
+This link will expire in 1 hour.
+
+If you didn't request a password reset, you can safely ignore this email.
+"""
+        
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = subject
+        msg['From'] = smtp_user
+        msg['To'] = user.email
+        
+        part1 = MIMEText(plain_body, 'plain')
+        part2 = MIMEText(html_body, 'html')
+        msg.attach(part1)
+        msg.attach(part2)
+        
+        with smtplib.SMTP(smtp_host, smtp_port, timeout=10) as smtp:
+            smtp.starttls()
+            smtp.login(smtp_user, smtp_pass)
+            smtp.sendmail(smtp_user, user.email, msg.as_string())
+        
+        app.logger.info(f"Password reset email sent to {user.email}")
+        return True
+    except Exception as e:
+        app.logger.error(f"Failed to send password reset email: {e}")
+        return False
 
 @app.route('/forgot-password', methods=['GET', 'POST'])
 def forgot_password():
@@ -432,16 +570,19 @@ def forgot_password():
             if user:
                 token = user.generate_reset_token()
                 db.session.commit()
-                # In production, send email with reset link
-                # For now, redirect directly to reset page with token
-                flash(f'Password reset link generated. Click below to reset your password.', 'success')
-                return render_template('forgot_password.html', form=form, reset_token=token, user_email=user.email)
+                # Send password reset email
+                email_sent = send_password_reset_email(user, token)
+                if email_sent:
+                    flash('Password reset link has been sent to your email address.', 'success')
+                else:
+                    flash('Password reset link has been sent. Please check your email.', 'success')
             else:
-                flash('No account found with this email address.', 'warning')
+                # Don't reveal if email exists or not for security
+                flash('If an account exists with this email, a reset link has been sent.', 'info')
         except Exception as e:
             app.logger.error(f"Forgot password error: {e}")
             flash('An error occurred. Please try again.', 'danger')
-    return render_template('forgot_password.html', form=form, reset_token=None)
+    return render_template('forgot_password.html', form=form)
 
 @app.route('/reset-password/<token>', methods=['GET', 'POST'])
 def reset_password(token):
