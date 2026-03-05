@@ -6,24 +6,19 @@
   "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#06b6d4",
+  "orientation": "portrait",
   "icons": [
     {
       "src": "/static/app-icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/static/app-icon.svg",
-      "sizes": "192x192",
+      "sizes": "48x48 72x72 96x96 128x128 192x192 256x256 512x512",
       "type": "image/svg+xml",
       "purpose": "any"
     },
     {
       "src": "/static/app-icon.svg",
-      "sizes": "512x512",
+      "sizes": "48x48 72x72 96x96 128x128 192x192 256x256 512x512",
       "type": "image/svg+xml",
-      "purpose": "any"
+      "purpose": "maskable"
     }
   ]
 }
