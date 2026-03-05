@@ -632,7 +632,21 @@ def my_rsvps():
 
 @app.route('/')
 def index():
-    events = Event.query.order_by(Event.datetime.asc()).all()
+    now = datetime.utcnow()
+    # Get upcoming events (soonest first) - handle NULL datetimes
+    upcoming_events = Event.query.filter(
+        Event.datetime != None,
+        Event.datetime >= now
+    ).order_by(Event.datetime.asc()).all()
+    # Get past events (most recent first)
+    past_events = Event.query.filter(
+        Event.datetime != None,
+        Event.datetime < now
+    ).order_by(Event.datetime.desc()).all()
+    # Get events with no datetime set
+    no_date_events = Event.query.filter(Event.datetime == None).all()
+    # Combine: upcoming first, then past, then no date
+    events = upcoming_events + past_events + no_date_events
     return render_template('index.html', events=events)
 
 @app.route('/event/<int:event_id>')
