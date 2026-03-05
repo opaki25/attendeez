@@ -172,6 +172,63 @@
             grid-template-columns: 1fr;
         }
     }
+    
+    .search-container {
+        margin-bottom: 1.5rem;
+    }
+    .search-input-wrapper {
+        position: relative;
+        max-width: 500px;
+    }
+    .search-input {
+        width: 100%;
+        padding: 0.875rem 1rem 0.875rem 3rem;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        color: #fff;
+        font-size: 0.95rem;
+        transition: all 0.2s ease;
+    }
+    .search-input:focus {
+        outline: none;
+        border-color: rgba(6, 182, 212, 0.5);
+        background: rgba(255, 255, 255, 0.05);
+        box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.1);
+    }
+    .search-input::placeholder {
+        color: #6b7280;
+    }
+    .search-icon {
+        position: absolute;
+        left: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #6b7280;
+        pointer-events: none;
+    }
+    .search-clear {
+        position: absolute;
+        right: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        color: #6b7280;
+        cursor: pointer;
+        padding: 0.25rem;
+        display: none;
+        transition: color 0.2s;
+    }
+    .search-clear:hover {
+        color: #fff;
+    }
+    .search-clear.visible {
+        display: block;
+    }
+    .rsvp-card.hidden, h2.section-hidden {
+        display: none;
+    }
 </style>
 
 <div class="dashboard-container">
@@ -186,17 +243,33 @@
         </a>
     </div>
     
+    <div class="search-container">
+        <div class="search-input-wrapper">
+            <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="text" class="search-input" id="rsvpSearch" placeholder="Search your RSVPs..." autocomplete="off">
+            <button class="search-clear" id="searchClear" onclick="clearSearch()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+    </div>
+    
     {% if current_rsvps %}
-    <h2 style="font-family: 'Syne', sans-serif; font-size: 1.25rem; font-weight: 600; color: #06b6d4; margin-bottom: 1.5rem;">
+    <h2 id="currentRsvpsTitle" style="font-family: 'Syne', sans-serif; font-size: 1.25rem; font-weight: 600; color: #06b6d4; margin-bottom: 1.5rem;">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline; vertical-align: middle; margin-right: 0.5rem;">
             <circle cx="12" cy="12" r="10"></circle>
             <polyline points="12 6 12 12 16 14"></polyline>
         </svg>
         Upcoming Events
     </h2>
-    <div class="rsvps-grid" style="margin-bottom: 3rem;">
+    <div class="rsvps-grid" id="currentRsvpsGrid" style="margin-bottom: 3rem;">
         {% for attendance in current_rsvps %}
-        <div class="rsvp-card">
+        <div class="rsvp-card" data-name="{{ attendance.event.name|lower }}" data-venue="{{ (attendance.event.venue or '')|lower }}">
             <h3 class="event-name">{{ attendance.event.name }}</h3>
             <div class="event-meta">
                 <div class="event-meta-item">
@@ -260,15 +333,15 @@
     {% endif %}
     
     {% if past_rsvps %}
-    <h2 style="font-family: 'Syne', sans-serif; font-size: 1.25rem; font-weight: 600; color: #9ca3af; margin-bottom: 1.5rem;">
+    <h2 id="pastRsvpsTitle" style="font-family: 'Syne', sans-serif; font-size: 1.25rem; font-weight: 600; color: #9ca3af; margin-bottom: 1.5rem;">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline; vertical-align: middle; margin-right: 0.5rem;">
             <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
         </svg>
         Past Events
     </h2>
-    <div class="rsvps-grid" style="opacity: 0.8;">
+    <div class="rsvps-grid" id="pastRsvpsGrid" style="opacity: 0.8;">
         {% for attendance in past_rsvps %}
-        <div class="rsvp-card" style="border-color: rgba(255,255,255,0.05);">
+        <div class="rsvp-card" data-name="{{ attendance.event.name|lower }}" data-venue="{{ (attendance.event.venue or '')|lower }}" style="border-color: rgba(255,255,255,0.05);">
             <span style="display: inline-block; padding: 0.25rem 0.5rem; background: rgba(107, 114, 128, 0.2); border-radius: 4px; font-size: 0.7rem; color: #9ca3af; margin-bottom: 0.5rem;">PAST EVENT</span>
             <h3 class="event-name">{{ attendance.event.name }}</h3>
             <div class="event-meta">
@@ -339,4 +412,82 @@
     </div>
     {% endif %}
 </div>
+
+<script>
+// Search functionality
+const searchInput = document.getElementById('rsvpSearch');
+const searchClear = document.getElementById('searchClear');
+const currentRsvpsGrid = document.getElementById('currentRsvpsGrid');
+const pastRsvpsGrid = document.getElementById('pastRsvpsGrid');
+const currentRsvpsTitle = document.getElementById('currentRsvpsTitle');
+const pastRsvpsTitle = document.getElementById('pastRsvpsTitle');
+
+if (searchInput) {
+    searchInput.addEventListener('input', function() {
+        const query = this.value.toLowerCase().trim();
+        filterRsvps(query);
+        
+        if (query.length > 0) {
+            searchClear.classList.add('visible');
+        } else {
+            searchClear.classList.remove('visible');
+        }
+    });
+}
+
+function filterRsvps(query) {
+    let currentVisible = 0;
+    let pastVisible = 0;
+    
+    // Filter current RSVPs
+    if (currentRsvpsGrid) {
+        const cards = currentRsvpsGrid.querySelectorAll('.rsvp-card');
+        cards.forEach(card => {
+            const name = card.dataset.name || '';
+            const venue = card.dataset.venue || '';
+            const matches = name.includes(query) || venue.includes(query);
+            
+            if (query === '' || matches) {
+                card.classList.remove('hidden');
+                currentVisible++;
+            } else {
+                card.classList.add('hidden');
+            }
+        });
+    }
+    
+    // Filter past RSVPs
+    if (pastRsvpsGrid) {
+        const cards = pastRsvpsGrid.querySelectorAll('.rsvp-card');
+        cards.forEach(card => {
+            const name = card.dataset.name || '';
+            const venue = card.dataset.venue || '';
+            const matches = name.includes(query) || venue.includes(query);
+            
+            if (query === '' || matches) {
+                card.classList.remove('hidden');
+                pastVisible++;
+            } else {
+                card.classList.add('hidden');
+            }
+        });
+    }
+    
+    // Show/hide section titles based on visible cards
+    if (currentRsvpsTitle) {
+        currentRsvpsTitle.classList.toggle('section-hidden', currentVisible === 0 && query !== '');
+    }
+    if (pastRsvpsTitle) {
+        pastRsvpsTitle.classList.toggle('section-hidden', pastVisible === 0 && query !== '');
+    }
+}
+
+function clearSearch() {
+    if (searchInput) {
+        searchInput.value = '';
+        searchInput.dispatchEvent(new Event('input'));
+        searchInput.focus();
+    }
+}
+</script>
 {% endblock %}

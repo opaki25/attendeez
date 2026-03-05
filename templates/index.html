@@ -433,6 +433,76 @@
             flex-direction: column;
         }
     }
+    
+    .search-container {
+        margin-bottom: 1.5rem;
+    }
+    .search-input-wrapper {
+        position: relative;
+        max-width: 500px;
+    }
+    .search-input {
+        width: 100%;
+        padding: 0.875rem 1rem 0.875rem 3rem;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        color: #fff;
+        font-size: 0.95rem;
+        transition: all 0.2s ease;
+    }
+    .search-input:focus {
+        outline: none;
+        border-color: rgba(6, 182, 212, 0.5);
+        background: rgba(255, 255, 255, 0.05);
+        box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.1);
+    }
+    .search-input::placeholder {
+        color: #6b7280;
+    }
+    .search-icon {
+        position: absolute;
+        left: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #6b7280;
+        pointer-events: none;
+    }
+    .search-clear {
+        position: absolute;
+        right: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        color: #6b7280;
+        cursor: pointer;
+        padding: 0.25rem;
+        display: none;
+        transition: color 0.2s;
+    }
+    .search-clear:hover {
+        color: #fff;
+    }
+    .search-clear.visible {
+        display: block;
+    }
+    .no-results {
+        text-align: center;
+        padding: 3rem 2rem;
+        color: #6b7280;
+        display: none;
+    }
+    .no-results.visible {
+        display: block;
+    }
+    .no-results-icon {
+        margin-bottom: 1rem;
+        color: #4b5563;
+    }
+    .event-card.hidden {
+        display: none;
+    }
 </style>
 
 <section class="hero-section">
@@ -454,10 +524,26 @@
 
 <h2 class="section-title">Upcoming Events</h2>
 
+<div class="search-container">
+    <div class="search-input-wrapper">
+        <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input type="text" class="search-input" id="eventSearch" placeholder="Search events by name, venue, or description..." autocomplete="off">
+        <button class="search-clear" id="searchClear" onclick="clearSearch()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+        </button>
+    </div>
+</div>
+
 {% if events %}
-<div class="events-grid">
+<div class="events-grid" id="eventsGrid">
     {% for event in events %}
-    <div class="event-card">
+    <div class="event-card" data-name="{{ event.name|lower }}" data-venue="{{ (event.venue or '')|lower }}" data-description="{{ (event.description or '')|lower }}">
         {% if event.poster %}
         {% if event.poster.startswith('http') %}
         <img src="{{ event.poster }}" class="event-poster" alt="{{ event.name }}">
@@ -532,6 +618,15 @@
         </div>
     </div>
     {% endfor %}
+</div>
+<div class="no-results" id="noResults">
+    <div class="no-results-icon">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+    </div>
+    <p>No events found matching your search.</p>
 </div>
 {% else %}
 <div class="empty-state">
@@ -707,5 +802,66 @@ document.addEventListener('keydown', function(e) {
         closeShareModal();
     }
 });
+
+// Search functionality
+const searchInput = document.getElementById('eventSearch');
+const searchClear = document.getElementById('searchClear');
+const eventsGrid = document.getElementById('eventsGrid');
+const noResults = document.getElementById('noResults');
+
+if (searchInput) {
+    searchInput.addEventListener('input', function() {
+        const query = this.value.toLowerCase().trim();
+        filterEvents(query);
+        
+        // Show/hide clear button
+        if (query.length > 0) {
+            searchClear.classList.add('visible');
+        } else {
+            searchClear.classList.remove('visible');
+        }
+    });
+}
+
+function filterEvents(query) {
+    if (!eventsGrid) return;
+    
+    const cards = eventsGrid.querySelectorAll('.event-card');
+    let visibleCount = 0;
+    
+    cards.forEach(card => {
+        const name = card.dataset.name || '';
+        const venue = card.dataset.venue || '';
+        const description = card.dataset.description || '';
+        
+        const matches = name.includes(query) || 
+                       venue.includes(query) || 
+                       description.includes(query);
+        
+        if (query === '' || matches) {
+            card.classList.remove('hidden');
+            visibleCount++;
+        } else {
+            card.classList.add('hidden');
+        }
+    });
+    
+    // Show/hide no results message
+    if (noResults) {
+        if (visibleCount === 0 && query !== '') {
+            noResults.classList.add('visible');
+        } else {
+            noResults.classList.remove('visible');
+        }
+    }
+}
+
+function clearSearch() {
+    if (searchInput) {
+        searchInput.value = '';
+        searchInput.dispatchEvent(new Event('input'));
+        searchInput.focus();
+    }
+}
 </script>
 {% endblock %}
