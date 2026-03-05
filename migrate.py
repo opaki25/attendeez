@@ -21,12 +21,27 @@ else:
                 name VARCHAR(100) NOT NULL,
                 email VARCHAR(120) UNIQUE NOT NULL,
                 password_hash VARCHAR(256) NOT NULL,
+                reset_token VARCHAR(100),
+                reset_token_expiry DATETIME,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         ''')
         print('Created user table')
     else:
         print('user table already exists')
+        # Check if reset_token columns exist
+        cursor.execute('PRAGMA table_info(user)')
+        user_columns = [col[1] for col in cursor.fetchall()]
+        if 'reset_token' not in user_columns:
+            cursor.execute('ALTER TABLE user ADD COLUMN reset_token VARCHAR(100)')
+            print('Added reset_token column to user')
+        else:
+            print('reset_token column already exists in user')
+        if 'reset_token_expiry' not in user_columns:
+            cursor.execute('ALTER TABLE user ADD COLUMN reset_token_expiry DATETIME')
+            print('Added reset_token_expiry column to user')
+        else:
+            print('reset_token_expiry column already exists in user')
     
     # Get existing columns for event table
     cursor.execute('PRAGMA table_info(event)')

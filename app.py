@@ -2,7 +2,7 @@ import os
 import uuid
 import base64
 from dotenv import load_dotenv
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import Flask, render_template, redirect, url_for, request, flash, send_file, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_wtf import FlaskForm
@@ -148,6 +148,8 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(128), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    reset_token = db.Column(db.String(100), nullable=True)
+    reset_token_expiry = db.Column(db.DateTime, nullable=True)
     
     # Events created by this user
     events = db.relationship('Event', back_populates='creator', lazy='dynamic')
@@ -159,6 +161,20 @@ class User(UserMixin, db.Model):
     def check_password(self, password):
         from werkzeug.security import check_password_hash
         return check_password_hash(self.password_hash, password)
+    
+    def generate_reset_token(self):
+        self.reset_token = uuid.uuid4().hex
+        self.reset_token_expiry = datetime.utcnow() + timedelta(hours=1)
+        return self.reset_token
+    
+    def verify_reset_token(self, token):
+        if self.reset_token == token and self.reset_token_expiry > datetime.utcnow():
+            return True
+        return False
+    
+    def clear_reset_token(self):
+        self.reset_token = None
+        self.reset_token_expiry = None
 
 
 class Attendee(db.Model):
@@ -250,6 +266,15 @@ class UserLoginForm(FlaskForm):
 class PasscodeForm(FlaskForm):
     passcode = PasswordField('Dashboard Passcode', validators=[DataRequired()])
     submit = SubmitField('Access Dashboard')
+
+class ForgotPasswordForm(FlaskForm):
+    email = StringField('Email Address', validators=[DataRequired(), Email()])
+    submit = SubmitField('Send Reset Link')
+
+class ResetPasswordForm(FlaskForm):
+    password = PasswordField('New Password', validators=[DataRequired()])
+    confirm_password = PasswordField('Confirm Password', validators=[DataRequired()])
+    submit = SubmitField('Reset Password')
 
 # Routes
 @app.route('/debug/supabase')
@@ -372,13 +397,21 @@ def user_login():
         return redirect(url_for('index'))
     form = UserLoginForm()
     if form.validate_on_submit():
-        user = User.query.filter_by(email=form.email.data.lower()).first()
-        if user and user.check_password(form.password.data):
+        try:
+            user = User.query.filter_by(email=form.email.data.lower()).first()
+            if user is None:
+                flash('No account found with this email. Please create an account first.', 'warning')
+                return render_template('user_login.html', form=form)
+            if not user.check_password(form.password.data):
+                flash('Incorrect password. Please try again or reset your password.', 'danger')
+                return render_template('user_login.html', form=form)
             login_user(user)
             flash('Welcome back!', 'success')
             next_page = request.args.get('next')
             return redirect(next_page or url_for('index'))
-        flash('Invalid email or password', 'danger')
+        except Exception as e:
+            app.logger.error(f"Login error: {e}")
+            flash('An error occurred during login. Please try again.', 'danger')
     return render_template('user_login.html', form=form)
 
 @app.route('/logout')
@@ -387,6 +420,55 @@ def user_logout():
     logout_user()
     flash('You have been logged out.', 'info')
     return redirect(url_for('index'))
+
+@app.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    form = ForgotPasswordForm()
+    if form.validate_on_submit():
+        try:
+            user = User.query.filter_by(email=form.email.data.lower()).first()
+            if user:
+                token = user.generate_reset_token()
+                db.session.commit()
+                # In production, send email with reset link
+                # For now, redirect directly to reset page with token
+                flash(f'Password reset link generated. Click below to reset your password.', 'success')
+                return render_template('forgot_password.html', form=form, reset_token=token, user_email=user.email)
+            else:
+                flash('No account found with this email address.', 'warning')
+        except Exception as e:
+            app.logger.error(f"Forgot password error: {e}")
+            flash('An error occurred. Please try again.', 'danger')
+    return render_template('forgot_password.html', form=form, reset_token=None)
+
+@app.route('/reset-password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    
+    # Find user with this reset token
+    user = User.query.filter_by(reset_token=token).first()
+    if not user or not user.verify_reset_token(token):
+        flash('Invalid or expired reset link. Please request a new one.', 'danger')
+        return redirect(url_for('forgot_password'))
+    
+    form = ResetPasswordForm()
+    if form.validate_on_submit():
+        if form.password.data != form.confirm_password.data:
+            flash('Passwords do not match.', 'danger')
+            return render_template('reset_password.html', form=form, token=token)
+        try:
+            user.set_password(form.password.data)
+            user.clear_reset_token()
+            db.session.commit()
+            flash('Your password has been reset successfully! You can now log in.', 'success')
+            return redirect(url_for('user_login'))
+        except Exception as e:
+            app.logger.error(f"Reset password error: {e}")
+            flash('An error occurred. Please try again.', 'danger')
+    return render_template('reset_password.html', form=form, token=token)
 
 @app.route('/my-events')
 @login_required
@@ -399,12 +481,18 @@ def my_events():
 @login_required
 def my_rsvps():
     """Show events the user has RSVP'd to."""
-    # Find attendee profile linked to user
-    attendee = Attendee.query.filter_by(user_id=current_user.id).first()
-    rsvps = []
-    if attendee:
-        rsvps = attendee.attendances
-    return render_template('my_rsvps.html', rsvps=rsvps)
+    try:
+        # Find attendee profile linked to user
+        attendee = Attendee.query.filter_by(user_id=current_user.id).first()
+        rsvps = []
+        if attendee:
+            # Filter out attendances where event might be deleted
+            rsvps = [a for a in attendee.attendances if a.event is not None]
+        return render_template('my_rsvps.html', rsvps=rsvps)
+    except Exception as e:
+        app.logger.error(f"My RSVPs error: {e}")
+        flash('Error loading your RSVPs. Please try again.', 'danger')
+        return render_template('my_rsvps.html', rsvps=[])
 
 @app.route('/')
 def index():
