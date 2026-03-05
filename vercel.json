@@ -1,18 +1,12 @@
 {
   "version": 2,
-  "framework": null,
   "builds": [
     {
       "src": "app.py",
-      "use": "@vercel/python"
-    },
-    {
-      "src": "static/**",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "templates/**",
-      "use": "@vercel/static"
+      "use": "@vercel/python",
+      "config": {
+        "maxLambdaSize": "50mb"
+      }
     }
   ],
   "routes": [
@@ -24,12 +18,5 @@
       "src": "/(.*)",
       "dest": "/app.py"
     }
-  ],
-  "env": {
-    "VERCEL": "1"
-  },
-  "buildCommand": null,
-  "outputDirectory": null,
-  "installCommand": "pip install -r requirements.txt",
-  "ignoreCommand": ""
+  ]
 }
