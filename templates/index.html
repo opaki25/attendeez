@@ -262,7 +262,7 @@
             <p class="hero-subtitle">Find meetups, conferences and workshops. Manage attendees easily with ATTENDEEZ.</p>
         </div>
         <div class="hero-actions">
-            <a href="{{ url_for('organizer_login') }}" class="btn-hero">
+            <a href="{{ url_for('create_event') }}" class="btn-hero">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M12 5v14M5 12h14"/>
                 </svg>
@@ -302,8 +302,25 @@
                     <line x1="8" y1="2" x2="8" y2="6"></line>
                     <line x1="3" y1="10" x2="21" y2="10"></line>
                 </svg>
-                {{ event.datetime.strftime('%b %d, %Y • %I:%M %p') if event.datetime else 'Date TBA' }}{% if event.end_datetime %} - {{ event.end_datetime.strftime('%I:%M %p') }}{% endif %}
-                · {{ event.venue or 'Location TBA' }}
+                {% if event.datetime %}
+                    {{ event.datetime.strftime('%b %d, %Y • %I:%M %p') }}
+                    {% if event.end_datetime %}
+                        {% if event.end_datetime.date() != event.datetime.date() %}
+                            → {{ event.end_datetime.strftime('%b %d, %Y • %I:%M %p') }}
+                        {% else %}
+                            - {{ event.end_datetime.strftime('%I:%M %p') }}
+                        {% endif %}
+                    {% endif %}
+                {% else %}
+                    Date TBA
+                {% endif %}
+            </div>
+            <div class="event-meta" style="margin-top: -0.25rem;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                    <circle cx="12" cy="10" r="3"></circle>
+                </svg>
+                {{ event.venue or 'Location TBA' }}
             </div>
             <p class="event-description">{{ event.description[:120] }}{% if event.description|length > 120 %}...{% endif %}</p>
             <div class="event-actions">

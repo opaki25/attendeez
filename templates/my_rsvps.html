@@ -206,14 +206,26 @@
                         <line x1="8" y1="2" x2="8" y2="6"></line>
                         <line x1="3" y1="10" x2="21" y2="10"></line>
                     </svg>
-                    {{ attendance.event.datetime.strftime('%B %d, %Y') if attendance.event.datetime else 'No date set' }}
+                    {% if attendance.event.datetime %}
+                        {{ attendance.event.datetime.strftime('%B %d, %Y') }}
+                        {% if attendance.event.end_datetime and attendance.event.end_datetime.date() != attendance.event.datetime.date() %}
+                            → {{ attendance.event.end_datetime.strftime('%B %d, %Y') }}
+                        {% endif %}
+                    {% else %}
+                        No date set
+                    {% endif %}
                 </div>
                 <div class="event-meta-item">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="10"></circle>
                         <polyline points="12 6 12 12 16 14"></polyline>
                     </svg>
-                    {{ attendance.event.datetime.strftime('%I:%M %p') if attendance.event.datetime else '' }}{% if attendance.event.end_datetime %} - {{ attendance.event.end_datetime.strftime('%I:%M %p') }}{% endif %}
+                    {% if attendance.event.datetime %}
+                        {{ attendance.event.datetime.strftime('%I:%M %p') }}
+                        {% if attendance.event.end_datetime %}
+                            - {{ attendance.event.end_datetime.strftime('%I:%M %p') }}
+                        {% endif %}
+                    {% endif %}
                 </div>
                 <div class="event-meta-item">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -267,7 +279,14 @@
                         <line x1="8" y1="2" x2="8" y2="6"></line>
                         <line x1="3" y1="10" x2="21" y2="10"></line>
                     </svg>
-                    {{ attendance.event.datetime.strftime('%B %d, %Y') if attendance.event.datetime else 'No date set' }}
+                    {% if attendance.event.datetime %}
+                        {{ attendance.event.datetime.strftime('%B %d, %Y') }}
+                        {% if attendance.event.end_datetime and attendance.event.end_datetime.date() != attendance.event.datetime.date() %}
+                            → {{ attendance.event.end_datetime.strftime('%B %d, %Y') }}
+                        {% endif %}
+                    {% else %}
+                        No date set
+                    {% endif %}
                 </div>
                 <div class="event-meta-item">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
