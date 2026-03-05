@@ -1856,6 +1856,13 @@ try:
                 db.session.execute(text('ALTER TABLE attendance ADD COLUMN user_id INTEGER'))
                 print('Added user_id column to attendance')
         
+        # Check and add columns to attendee table
+        if 'attendee' in inspector.get_table_names():
+            attendee_columns = [col['name'] for col in inspector.get_columns('attendee')]
+            if 'user_id' not in attendee_columns:
+                db.session.execute(text('ALTER TABLE attendee ADD COLUMN user_id INTEGER'))
+                print('Added user_id column to attendee')
+        
         db.session.commit()
 except Exception as e:
     print(f"Database init error: {e}")
