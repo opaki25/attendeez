@@ -4,6 +4,7 @@ Flask-WTF
 Flask-Login
 python-dotenv
 flask-cors
+flask-compress
 reportlab
 qrcode[pil]
 psycopg2-binary

@@ -18,6 +18,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.image import MIMEImage
 from flask_cors import CORS
+from flask_compress import Compress
 
 # Optional: reportlab for PDF export (may not work on all serverless platforms)
 try:
@@ -137,7 +138,21 @@ def upload_to_supabase(file_data, filename):
 
 db = SQLAlchemy(app)
 CORS(app, supports_credentials=True)
+Compress(app)  # Enable gzip/brotli compression
 login_manager = LoginManager(app)
+
+# Cache control for static files
+@app.after_request
+def add_cache_headers(response):
+    # Cache static assets for 1 year
+    if request.path.startswith('/static/'):
+        if any(request.path.endswith(ext) for ext in ['.css', '.js', '.woff', '.woff2', '.ttf', '.eot']):
+            response.cache_control.max_age = 31536000  # 1 year
+            response.cache_control.public = True
+        elif any(request.path.endswith(ext) for ext in ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg', '.ico']):
+            response.cache_control.max_age = 2592000  # 30 days
+            response.cache_control.public = True
+    return response
 login_manager.login_view = 'user_login'
 
 # Google OAuth Setup
