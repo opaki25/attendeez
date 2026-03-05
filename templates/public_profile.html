@@ -1,0 +1,320 @@
+{% extends 'base.html' %}
+{% block title %}{{ user.name }} - ATTENDEEZ{% endblock %}
+{% block content %}
+<style>
+    .profile-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 2rem 1rem;
+    }
+    .profile-header {
+        background: rgba(255, 255, 255, 0.03);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 20px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    .profile-top {
+        display: flex;
+        align-items: flex-start;
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    .profile-avatar {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 3px solid rgba(6, 182, 212, 0.3);
+        flex-shrink: 0;
+    }
+    .profile-avatar-placeholder {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, rgba(6, 182, 212, 0.2) 0%, rgba(6, 182, 212, 0.1) 100%);
+        border: 3px solid rgba(6, 182, 212, 0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #06b6d4;
+        flex-shrink: 0;
+    }
+    .profile-info {
+        flex: 1;
+        min-width: 0;
+    }
+    .profile-name {
+        font-family: 'Syne', sans-serif;
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #fff;
+        margin-bottom: 0.25rem;
+    }
+    .profile-username {
+        font-size: 1rem;
+        color: #06b6d4;
+        margin-bottom: 0.75rem;
+    }
+    .profile-bio {
+        color: #9ca3af;
+        font-size: 1rem;
+        line-height: 1.6;
+    }
+    .profile-stats {
+        display: flex;
+        gap: 2rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .profile-stat {
+        text-align: center;
+    }
+    .profile-stat-value {
+        font-family: 'Syne', sans-serif;
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #06b6d4;
+    }
+    .profile-stat-label {
+        font-size: 0.85rem;
+        color: #6b7280;
+    }
+    .section-title {
+        font-family: 'Syne', sans-serif;
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #fff;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .section-title svg {
+        color: #06b6d4;
+    }
+    .events-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 1.25rem;
+    }
+    .event-card {
+        background: rgba(255, 255, 255, 0.03);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 16px;
+        padding: 1.25rem;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: block;
+    }
+    .event-card:hover {
+        border-color: rgba(6, 182, 212, 0.3);
+        transform: translateY(-4px);
+        text-decoration: none;
+    }
+    .event-name {
+        font-family: 'Syne', sans-serif;
+        font-size: 1rem;
+        font-weight: 600;
+        color: #fff;
+        margin-bottom: 0.75rem;
+    }
+    .event-meta {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #9ca3af;
+        font-size: 0.85rem;
+        margin-bottom: 0.5rem;
+    }
+    .event-meta svg {
+        flex-shrink: 0;
+        color: #6b7280;
+    }
+    .past-section {
+        margin-top: 2.5rem;
+        opacity: 0.8;
+    }
+    .past-section .section-title {
+        color: #9ca3af;
+    }
+    .past-section .event-card {
+        border-color: rgba(255, 255, 255, 0.05);
+    }
+    .empty-events {
+        text-align: center;
+        padding: 2rem;
+        color: #6b7280;
+        background: rgba(255, 255, 255, 0.02);
+        border-radius: 12px;
+        border: 1px dashed rgba(255, 255, 255, 0.1);
+    }
+    .back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #6b7280;
+        text-decoration: none;
+        font-size: 0.9rem;
+        margin-bottom: 1.5rem;
+        transition: color 0.2s;
+    }
+    .back-link:hover {
+        color: #06b6d4;
+        text-decoration: none;
+    }
+    
+    @media (max-width: 768px) {
+        .profile-top {
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+        .profile-name {
+            font-size: 1.5rem;
+        }
+        .profile-stats {
+            justify-content: center;
+        }
+        .events-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div class="profile-container">
+    <a href="{{ url_for('people') }}" class="back-link">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="19" y1="12" x2="5" y2="12"></line>
+            <polyline points="12 19 5 12 12 5"></polyline>
+        </svg>
+        Back to People
+    </a>
+    
+    <div class="profile-header">
+        <div class="profile-top">
+            {% if user.profile_picture %}
+                {% if user.profile_picture.startswith('http') %}
+                <img src="{{ user.profile_picture }}" class="profile-avatar" alt="{{ user.name }}">
+                {% else %}
+                <img src="{{ url_for('static', filename='uploads/' + user.profile_picture) }}" class="profile-avatar" alt="{{ user.name }}">
+                {% endif %}
+            {% else %}
+            <div class="profile-avatar-placeholder">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+            </div>
+            {% endif %}
+            <div class="profile-info">
+                <h1 class="profile-name">{{ user.name }}</h1>
+                {% if user.username %}
+                <p class="profile-username">@{{ user.username }}</p>
+                {% endif %}
+                {% if user.bio %}
+                <p class="profile-bio">{{ user.bio }}</p>
+                {% else %}
+                <p class="profile-bio" style="color: #4b5563; font-style: italic;">No bio yet</p>
+                {% endif %}
+            </div>
+        </div>
+        <div class="profile-stats">
+            <div class="profile-stat">
+                <div class="profile-stat-value">{{ user.events.count() }}</div>
+                <div class="profile-stat-label">Events Created</div>
+            </div>
+            <div class="profile-stat">
+                <div class="profile-stat-value">{{ upcoming_events|length }}</div>
+                <div class="profile-stat-label">Upcoming</div>
+            </div>
+        </div>
+    </div>
+    
+    {% if upcoming_events %}
+    <h2 class="section-title">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="16" y1="2" x2="16" y2="6"></line>
+            <line x1="8" y1="2" x2="8" y2="6"></line>
+            <line x1="3" y1="10" x2="21" y2="10"></line>
+        </svg>
+        Upcoming Events
+    </h2>
+    <div class="events-grid">
+        {% for event in upcoming_events %}
+        <a href="{{ url_for('event_detail', event_id=event.id) }}" class="event-card">
+            <h3 class="event-name">{{ event.name }}</h3>
+            <div class="event-meta">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+                {{ event.datetime.strftime('%b %d, %Y') if event.datetime else 'TBA' }}
+            </div>
+            <div class="event-meta">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                    <circle cx="12" cy="10" r="3"></circle>
+                </svg>
+                {{ event.venue or 'Location TBA' }}
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <h2 class="section-title">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="16" y1="2" x2="16" y2="6"></line>
+            <line x1="8" y1="2" x2="8" y2="6"></line>
+            <line x1="3" y1="10" x2="21" y2="10"></line>
+        </svg>
+        Upcoming Events
+    </h2>
+    <div class="empty-events">
+        <p>{{ user.name }} doesn't have any upcoming events</p>
+    </div>
+    {% endif %}
+    
+    {% if past_events %}
+    <div class="past-section">
+        <h2 class="section-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            Past Events
+        </h2>
+        <div class="events-grid">
+            {% for event in past_events %}
+            <a href="{{ url_for('event_detail', event_id=event.id) }}" class="event-card">
+                <h3 class="event-name">{{ event.name }}</h3>
+                <div class="event-meta">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                    {{ event.datetime.strftime('%b %d, %Y') if event.datetime else 'TBA' }}
+                </div>
+                <div class="event-meta">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                        <circle cx="12" cy="10" r="3"></circle>
+                    </svg>
+                    {{ event.venue or 'Location TBA' }}
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
