@@ -1,4 +1,4 @@
-"""Migration script to add check-in columns to attendance table."""
+"""Migration script to add columns for multi-user authentication system."""
 import sqlite3
 import os
 import uuid
@@ -12,25 +12,73 @@ else:
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     
-    # Get existing columns
-    cursor.execute('PRAGMA table_info(attendance)')
-    columns = [col[1] for col in cursor.fetchall()]
-    print('Current columns:', columns)
+    # Check if user table exists and create it if not
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='user'")
+    if not cursor.fetchone():
+        cursor.execute('''
+            CREATE TABLE user (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name VARCHAR(100) NOT NULL,
+                email VARCHAR(120) UNIQUE NOT NULL,
+                password_hash VARCHAR(256) NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        print('Created user table')
+    else:
+        print('user table already exists')
     
-    # Add new columns if they don't exist
-    if 'checked_in' not in columns:
+    # Get existing columns for event table
+    cursor.execute('PRAGMA table_info(event)')
+    event_columns = [col[1] for col in cursor.fetchall()]
+    print('Event table columns:', event_columns)
+    
+    # Add creator_id to event table
+    if 'creator_id' not in event_columns:
+        cursor.execute('ALTER TABLE event ADD COLUMN creator_id INTEGER')
+        print('Added creator_id column to event')
+    else:
+        print('creator_id column already exists in event')
+    
+    # Add passcode to event table
+    if 'passcode' not in event_columns:
+        cursor.execute('ALTER TABLE event ADD COLUMN passcode VARCHAR(50)')
+        # Generate passcodes for existing events
+        cursor.execute('SELECT id FROM event WHERE passcode IS NULL')
+        events = cursor.fetchall()
+        for event in events:
+            passcode = uuid.uuid4().hex[:8].upper()
+            cursor.execute('UPDATE event SET passcode = ? WHERE id = ?', (passcode, event[0]))
+        print(f'Added passcode column and generated passcodes for {len(events)} existing events')
+    else:
+        print('passcode column already exists in event')
+    
+    # Get existing columns for attendance table
+    cursor.execute('PRAGMA table_info(attendance)')
+    attendance_columns = [col[1] for col in cursor.fetchall()]
+    print('Attendance table columns:', attendance_columns)
+    
+    # Add user_id to attendance table
+    if 'user_id' not in attendance_columns:
+        cursor.execute('ALTER TABLE attendance ADD COLUMN user_id INTEGER')
+        print('Added user_id column to attendance')
+    else:
+        print('user_id column already exists in attendance')
+    
+    # Add new columns if they don't exist (original migration)
+    if 'checked_in' not in attendance_columns:
         cursor.execute('ALTER TABLE attendance ADD COLUMN checked_in BOOLEAN DEFAULT 0')
         print('Added checked_in column')
     else:
         print('checked_in column already exists')
     
-    if 'check_in_time' not in columns:
+    if 'check_in_time' not in attendance_columns:
         cursor.execute('ALTER TABLE attendance ADD COLUMN check_in_time DATETIME')
         print('Added check_in_time column')
     else:
         print('check_in_time column already exists')
     
-    if 'check_in_token' not in columns:
+    if 'check_in_token' not in attendance_columns:
         cursor.execute('ALTER TABLE attendance ADD COLUMN check_in_token VARCHAR(64)')
         print('Added check_in_token column')
         # Generate tokens for existing records

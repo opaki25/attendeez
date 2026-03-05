@@ -209,11 +209,11 @@
 </style>
 
 <div class="create-event-container">
-    <a href="{{ url_for('organizer_dashboard') }}" class="back-link">
+    <a href="{{ url_for('my_events') }}" class="back-link">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M19 12H5M12 19l-7-7 7-7"/>
         </svg>
-        Back to Dashboard
+        Back to My Events
     </a>
     
     <div class="create-event-card">
@@ -274,6 +274,20 @@
                        placeholder="Event location"
                        value="{{ form.venue.data or '' }}"
                        required>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="passcode">Dashboard Passcode *</label>
+                <input type="text" 
+                       class="form-input" 
+                       id="passcode" 
+                       name="passcode" 
+                       placeholder="Create a passcode to share dashboard access"
+                       value="{{ form.passcode.data or '' }}"
+                       required>
+                <small style="color: #6b7280; font-size: 0.8rem; margin-top: 0.5rem; display: block;">
+                    This passcode allows others to access your event dashboard. Share it with your team members.
+                </small>
             </div>
             
             <div class="form-group">

@@ -1,0 +1,260 @@
+{% extends 'base.html' %}
+{% block title %}My RSVPs - ATTENDEEZ{% endblock %}
+{% block content %}
+<style>
+    .dashboard-container {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 2rem 1rem;
+    }
+    .dashboard-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    .dashboard-title {
+        font-family: 'Syne', sans-serif;
+        font-size: 2rem;
+        font-weight: 700;
+        color: #fff;
+    }
+    .btn-browse {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1.5rem;
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 12px;
+        color: #e5e5e5;
+        font-size: 0.95rem;
+        font-weight: 500;
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+    .btn-browse:hover {
+        background: rgba(6, 182, 212, 0.1);
+        border-color: rgba(6, 182, 212, 0.3);
+        color: #06b6d4;
+        text-decoration: none;
+    }
+    .rsvps-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1.5rem;
+    }
+    .rsvp-card {
+        background: rgba(255, 255, 255, 0.03);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 16px;
+        padding: 1.5rem;
+        transition: all 0.3s ease;
+        text-align: center;
+        box-shadow: 
+            0 8px 32px rgba(0, 0, 0, 0.3),
+            inset 0 1px 0 rgba(255, 255, 255, 0.1),
+            inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+    }
+    .rsvp-card:hover {
+        border-color: rgba(6, 182, 212, 0.3);
+        transform: translateY(-4px);
+        box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        background: rgba(255, 255, 255, 0.06);
+    }
+    .event-name {
+        font-family: 'Syne', sans-serif;
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #fff;
+        margin-bottom: 0.75rem;
+        text-align: center;
+    }
+    .event-meta {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+    }
+    .event-meta-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #9ca3af;
+        font-size: 0.875rem;
+    }
+    .event-meta-item svg {
+        color: #6b7280;
+        flex-shrink: 0;
+    }
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 0.75rem;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+    .status-confirmed {
+        background: rgba(34, 197, 94, 0.1);
+        border: 1px solid rgba(34, 197, 94, 0.2);
+        color: #22c55e;
+    }
+    .status-checked-in {
+        background: rgba(6, 182, 212, 0.1);
+        border: 1px solid rgba(6, 182, 212, 0.2);
+        color: #06b6d4;
+    }
+    .rsvp-actions {
+        display: flex;
+        gap: 0.75rem;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid rgba(255,255,255,0.06);
+    }
+    .btn-view {
+        flex: 1;
+        padding: 0.625rem 1rem;
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 8px;
+        color: #fff;
+        font-size: 0.875rem;
+        font-weight: 500;
+        text-decoration: none;
+        text-align: center;
+        transition: all 0.2s ease;
+    }
+    .btn-view:hover {
+        background: rgba(6, 182, 212, 0.1);
+        border-color: rgba(6, 182, 212, 0.3);
+        color: #06b6d4;
+        text-decoration: none;
+    }
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        color: #6b7280;
+    }
+    .empty-state-icon {
+        margin-bottom: 1rem;
+        color: #4b5563;
+    }
+    .empty-state-title {
+        font-size: 1.25rem;
+        color: #9ca3af;
+        margin-bottom: 0.5rem;
+    }
+    .empty-state-text {
+        font-size: 0.95rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    @media (max-width: 768px) {
+        .dashboard-header {
+            flex-direction: column;
+            text-align: center;
+        }
+        .dashboard-title {
+            font-size: 1.5rem;
+        }
+        .btn-browse {
+            width: 100%;
+            justify-content: center;
+        }
+        .rsvps-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div class="dashboard-container">
+    <div class="dashboard-header">
+        <h1 class="dashboard-title">My RSVPs</h1>
+        <a href="{{ url_for('index') }}" class="btn-browse">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            Browse Events
+        </a>
+    </div>
+    
+    {% if rsvps %}
+    <div class="rsvps-grid">
+        {% for attendance in rsvps %}
+        <div class="rsvp-card">
+            <h3 class="event-name">{{ attendance.event.name }}</h3>
+            <div class="event-meta">
+                <div class="event-meta-item">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                    {{ attendance.event.datetime.strftime('%B %d, %Y') if attendance.event.datetime else 'No date set' }}
+                </div>
+                <div class="event-meta-item">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                    {{ attendance.event.datetime.strftime('%I:%M %p') if attendance.event.datetime else '' }}{% if attendance.event.end_datetime %} - {{ attendance.event.end_datetime.strftime('%I:%M %p') }}{% endif %}
+                </div>
+                <div class="event-meta-item">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                        <circle cx="12" cy="10" r="3"></circle>
+                    </svg>
+                    {{ attendance.event.venue or 'Location TBA' }}
+                </div>
+            </div>
+            {% if attendance.checked_in %}
+            <div class="status-badge status-checked-in">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                Checked In
+            </div>
+            {% else %}
+            <div class="status-badge status-confirmed">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+                Confirmed
+            </div>
+            {% endif %}
+            <div class="rsvp-actions">
+                <a href="{{ url_for('event_detail', event_id=attendance.event.id) }}" class="btn-view">View Event</a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-state-icon">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+            </svg>
+        </div>
+        <h3 class="empty-state-title">No RSVPs yet</h3>
+        <p class="empty-state-text">Browse events and RSVP to see them here</p>
+        <a href="{{ url_for('index') }}" class="btn-browse">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            Browse Events
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

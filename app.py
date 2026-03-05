@@ -138,17 +138,39 @@ def upload_to_supabase(file_data, filename):
 db = SQLAlchemy(app)
 CORS(app, supports_credentials=True)
 login_manager = LoginManager(app)
-login_manager.login_view = 'organizer_login'
+login_manager.login_view = 'user_login'
 
 # Models
+class User(UserMixin, db.Model):
+    """Regular user account for signup/login"""
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(128), nullable=False)
+    email = db.Column(db.String(128), unique=True, nullable=False)
+    password_hash = db.Column(db.String(256), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Events created by this user
+    events = db.relationship('Event', back_populates='creator', lazy='dynamic')
+    
+    def set_password(self, password):
+        from werkzeug.security import generate_password_hash
+        self.password_hash = generate_password_hash(password)
+    
+    def check_password(self, password):
+        from werkzeug.security import check_password_hash
+        return check_password_hash(self.password_hash, password)
+
+
 class Attendee(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128), nullable=False)
     email = db.Column(db.String(128), nullable=False)
     contact = db.Column(db.String(64))
     status = db.Column(db.String(64))
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)  # Link to user account
 
     attendances = db.relationship('Attendance', back_populates='attendee')
+    user = db.relationship('User', backref='attendee_profile')
 
 class Event(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -158,7 +180,10 @@ class Event(db.Model):
     end_datetime = db.Column(db.DateTime)
     venue = db.Column(db.String(256))
     poster = db.Column(db.String(256))
+    creator_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    passcode = db.Column(db.String(64), nullable=True)  # Dashboard access passcode
 
+    creator = db.relationship('User', back_populates='events')
     attendances = db.relationship('Attendance', back_populates='event')
 
 class Attendance(db.Model):
@@ -178,20 +203,15 @@ class Attendance(db.Model):
         self.check_in_token = str(uuid.uuid4())
         return self.check_in_token
 
-# Organizer user (simple static single user)
-class Organizer(UserMixin):
-    id = 1
+# Admin Organizer user (simple static single user for admin access)
+class Organizer:
+    id = 'admin'
     username = os.environ.get('ORG_USER', 'admin')
     password = os.environ.get('ORG_PASS', 'password')
 
-    def get_id(self):
-        return self.id
-
 @login_manager.user_loader
 def load_user(user_id):
-    if int(user_id) == Organizer.id:
-        return Organizer()
-    return None
+    return User.query.get(int(user_id))
 
 # Forms
 class EventForm(FlaskForm):
@@ -201,6 +221,7 @@ class EventForm(FlaskForm):
     end_datetime = DateTimeField('End Time', format='%Y-%m-%dT%H:%M')
     venue = StringField('Venue', validators=[DataRequired()])
     poster = FileField('Event Poster')
+    passcode = StringField('Dashboard Passcode', validators=[DataRequired()])
     submit = SubmitField('Publish Event')
 
 class AttendeeForm(FlaskForm):
@@ -214,6 +235,21 @@ class LoginForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired()])
     password = PasswordField('Password', validators=[DataRequired()])
     submit = SubmitField('Login')
+
+class SignupForm(FlaskForm):
+    name = StringField('Full Name', validators=[DataRequired()])
+    email = StringField('Email Address', validators=[DataRequired(), Email()])
+    password = PasswordField('Password', validators=[DataRequired()])
+    submit = SubmitField('Create Account')
+
+class UserLoginForm(FlaskForm):
+    email = StringField('Email Address', validators=[DataRequired(), Email()])
+    password = PasswordField('Password', validators=[DataRequired()])
+    submit = SubmitField('Login')
+
+class PasscodeForm(FlaskForm):
+    passcode = PasswordField('Dashboard Passcode', validators=[DataRequired()])
+    submit = SubmitField('Access Dashboard')
 
 # Routes
 @app.route('/debug/supabase')
@@ -304,6 +340,72 @@ def debug_smtp():
     }
     return jsonify(info)
 
+# User Authentication Routes
+@app.route('/signup', methods=['GET', 'POST'])
+def signup():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    form = SignupForm()
+    if form.validate_on_submit():
+        # Check if email already exists
+        existing_user = User.query.filter_by(email=form.email.data.lower()).first()
+        if existing_user:
+            flash('An account with this email already exists. Please login.', 'danger')
+            return redirect(url_for('user_login'))
+        
+        user = User(name=form.name.data, email=form.email.data.lower())
+        user.set_password(form.password.data)
+        db.session.add(user)
+        db.session.commit()
+        
+        login_user(user)
+        flash('Account created successfully! Welcome to Attendeez.', 'success')
+        
+        # Redirect to original destination or index
+        next_page = request.args.get('next')
+        return redirect(next_page or url_for('index'))
+    return render_template('signup.html', form=form)
+
+@app.route('/login', methods=['GET', 'POST'])
+def user_login():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    form = UserLoginForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(email=form.email.data.lower()).first()
+        if user and user.check_password(form.password.data):
+            login_user(user)
+            flash('Welcome back!', 'success')
+            next_page = request.args.get('next')
+            return redirect(next_page or url_for('index'))
+        flash('Invalid email or password', 'danger')
+    return render_template('user_login.html', form=form)
+
+@app.route('/logout')
+@login_required
+def user_logout():
+    logout_user()
+    flash('You have been logged out.', 'info')
+    return redirect(url_for('index'))
+
+@app.route('/my-events')
+@login_required
+def my_events():
+    """Show events created by the current user."""
+    events = current_user.events.order_by(Event.datetime.desc()).all()
+    return render_template('my_events.html', events=events)
+
+@app.route('/my-rsvps')
+@login_required
+def my_rsvps():
+    """Show events the user has RSVP'd to."""
+    # Find attendee profile linked to user
+    attendee = Attendee.query.filter_by(user_id=current_user.id).first()
+    rsvps = []
+    if attendee:
+        rsvps = attendee.attendances
+    return render_template('my_rsvps.html', rsvps=rsvps)
+
 @app.route('/')
 def index():
     events = Event.query.order_by(Event.datetime.asc()).all()
@@ -315,40 +417,45 @@ def event_detail(event_id):
     return render_template('event.html', event=event)
 
 @app.route('/rsvp/<int:event_id>', methods=['GET','POST'])
+@login_required
 def rsvp(event_id):
     event = Event.query.get_or_404(event_id)
     form = AttendeeForm()
-    # if returning attendee id provided via hidden field
-    attendee_id = request.form.get('attendee_id')
+    
+    # Pre-fill form with user's info if available
+    if request.method == 'GET':
+        form.name.data = current_user.name
+        form.email.data = current_user.email
+        # Try to get existing attendee profile
+        existing_attendee = Attendee.query.filter_by(user_id=current_user.id).first()
+        if existing_attendee:
+            form.contact.data = existing_attendee.contact
+            form.status.data = existing_attendee.status
+    
     if form.validate_on_submit():
         try:
-            attendee = None
-            
-            # If returning attendee ID provided, try to load them
-            if attendee_id:
-                attendee = Attendee.query.get(int(attendee_id))
-                if attendee:
-                    # Update their info
-                    attendee.name = form.name.data
-                    attendee.email = form.email.data
-                    attendee.contact = form.contact.data
-                    attendee.status = form.status.data
-            
-            # If no attendee yet, try to find by email or create new
+            # Find or create attendee profile linked to user
+            attendee = Attendee.query.filter_by(user_id=current_user.id).first()
             if not attendee:
-                attendee = Attendee.query.filter_by(email=form.email.data).first()
+                # Try to find by email
+                attendee = Attendee.query.filter_by(email=current_user.email).first()
                 if attendee:
-                    # Update existing attendee's info
-                    attendee.name = form.name.data
-                    attendee.contact = form.contact.data
-                    attendee.status = form.status.data
+                    attendee.user_id = current_user.id
                 else:
                     # Create new attendee
-                    attendee = Attendee(name=form.name.data,
-                                        email=form.email.data,
-                                        contact=form.contact.data,
-                                        status=form.status.data)
+                    attendee = Attendee(
+                        name=form.name.data,
+                        email=current_user.email,
+                        contact=form.contact.data,
+                        status=form.status.data,
+                        user_id=current_user.id
+                    )
                     db.session.add(attendee)
+            
+            # Update attendee info
+            attendee.name = form.name.data
+            attendee.contact = form.contact.data
+            attendee.status = form.status.data
             
             # Flush to ensure attendee has an ID
             db.session.flush()
@@ -391,28 +498,45 @@ def confirm():
 
 @app.route('/organizer/login', methods=['GET','POST'])
 def organizer_login():
+    """Admin organizer login - for site-wide admin access"""
     form = LoginForm()
     if form.validate_on_submit():
         if form.username.data == Organizer.username and form.password.data == Organizer.password:
-            user = Organizer()
-            login_user(user)
-            return redirect(url_for('organizer_dashboard'))
+            # Store admin session flag
+            from flask import session
+            session['is_admin'] = True
+            flash('Admin login successful', 'success')
+            return redirect(url_for('admin_dashboard'))
         flash('Invalid credentials', 'danger')
     return render_template('organizer_login.html', form=form)
 
-@app.route('/organizer/logout')
-@login_required
-def organizer_logout():
-    logout_user()
+@app.route('/admin/logout')
+def admin_logout():
+    from flask import session
+    session.pop('is_admin', None)
+    flash('Admin logged out.', 'info')
     return redirect(url_for('index'))
 
-@app.route('/organizer')
-@login_required
-def organizer_dashboard():
+@app.route('/admin')
+def admin_dashboard():
+    """Admin dashboard - shows all events (site-wide admin only)"""
+    from flask import session
+    if not session.get('is_admin'):
+        flash('Admin access required.', 'danger')
+        return redirect(url_for('organizer_login'))
     events = Event.query.order_by(Event.datetime.desc()).all()
-    return render_template('organizer_dashboard.html', events=events)
+    return render_template('organizer_dashboard.html', events=events, is_admin=True)
 
-@app.route('/organizer/event/create', methods=['GET','POST'])
+# Legacy redirect for old organizer dashboard
+@app.route('/organizer')
+def organizer_dashboard():
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/organizer/logout')
+def organizer_logout():
+    return redirect(url_for('admin_logout'))
+
+@app.route('/event/create', methods=['GET','POST'])
 @login_required
 def create_event():
     form = EventForm()
@@ -435,18 +559,65 @@ def create_event():
                       datetime=form.datetime.data,
                       end_datetime=form.end_datetime.data,
                       venue=form.venue.data,
-                      poster=poster_value)
+                      poster=poster_value,
+                      creator_id=current_user.id,
+                      passcode=form.passcode.data)
         db.session.add(event)
         db.session.commit()
-        flash('Event created successfully')
-        return redirect(url_for('organizer_dashboard'))
+        flash(f'Event created successfully! Your dashboard passcode is: {form.passcode.data}', 'success')
+        return redirect(url_for('my_events'))
     return render_template('create_event.html', form=form)
 
+# Legacy route redirect
+@app.route('/organizer/event/create', methods=['GET','POST'])
+@login_required
+def create_event_legacy():
+    return redirect(url_for('create_event'))
 
-@app.route('/organizer/event/<int:event_id>/edit', methods=['GET', 'POST'])
+@app.route('/event/<int:event_id>/dashboard', methods=['GET', 'POST'])
+def event_dashboard(event_id):
+    """Event dashboard - accessible via passcode"""
+    event = Event.query.get_or_404(event_id)
+    form = PasscodeForm()
+    
+    # Check if user has dashboard access via session
+    from flask import session
+    session_key = f'event_{event_id}_access'
+    
+    # Admin has access to everything
+    if session.get('is_admin'):
+        return render_template('event_dashboard.html', event=event)
+    
+    # Event creator has automatic access
+    if current_user.is_authenticated and event.creator_id == current_user.id:
+        return render_template('event_dashboard.html', event=event)
+    
+    # Check session for passcode access
+    if session.get(session_key):
+        return render_template('event_dashboard.html', event=event)
+    
+    # Handle passcode form submission
+    if form.validate_on_submit():
+        if event.passcode and form.passcode.data == event.passcode:
+            session[session_key] = True
+            flash('Dashboard access granted!', 'success')
+            return render_template('event_dashboard.html', event=event)
+        else:
+            flash('Invalid passcode', 'danger')
+    
+    return render_template('event_passcode.html', event=event, form=form)
+
+@app.route('/event/<int:event_id>/edit', methods=['GET', 'POST'])
 @login_required
 def edit_event(event_id):
     event = Event.query.get_or_404(event_id)
+    
+    # Check if user is creator or admin
+    from flask import session
+    if not (session.get('is_admin') or event.creator_id == current_user.id):
+        flash('You do not have permission to edit this event.', 'danger')
+        return redirect(url_for('event_detail', event_id=event_id))
+    
     form = EventForm(obj=event)
     if form.validate_on_submit():
         event.name = form.name.data
@@ -454,6 +625,7 @@ def edit_event(event_id):
         event.datetime = form.datetime.data
         event.end_datetime = form.end_datetime.data
         event.venue = form.venue.data
+        event.passcode = form.passcode.data
         if form.poster.data:
             f = form.poster.data
             # Try Supabase Storage first (for production)
@@ -468,25 +640,49 @@ def edit_event(event_id):
                 event.poster = filename
         db.session.commit()
         flash('Event updated successfully')
-        return redirect(url_for('organizer_dashboard'))
+        return redirect(url_for('my_events'))
     return render_template('edit_event.html', form=form, event=event)
 
+# Legacy redirect
+@app.route('/organizer/event/<int:event_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_event_legacy(event_id):
+    return redirect(url_for('edit_event', event_id=event_id))
 
-@app.route('/organizer/event/<int:event_id>/delete', methods=['POST'])
+
+@app.route('/event/<int:event_id>/delete', methods=['POST'])
 @login_required
 def delete_event(event_id):
     event = Event.query.get_or_404(event_id)
+    
+    # Check if user is creator or admin
+    from flask import session
+    if not (session.get('is_admin') or event.creator_id == current_user.id):
+        flash('You do not have permission to delete this event.', 'danger')
+        return redirect(url_for('event_detail', event_id=event_id))
+    
     # Delete all attendances for this event
     Attendance.query.filter_by(event_id=event_id).delete()
     db.session.delete(event)
     db.session.commit()
     flash('Event deleted successfully')
-    return redirect(url_for('organizer_dashboard'))
+    return redirect(url_for('my_events'))
+
+# Legacy redirect
+@app.route('/organizer/event/<int:event_id>/delete', methods=['POST'])
+@login_required
+def delete_event_legacy(event_id):
+    return redirect(url_for('delete_event', event_id=event_id), code=307)
 
 
 @app.route('/organizer/analytics')
-@login_required
 def analytics_dashboard():
+    # Admin only
+    from flask import session
+    if not session.get('is_admin'):
+        flash('Admin access required.', 'danger')
+        return redirect(url_for('organizer_login'))
+    
     # Basic stats
     total_events = Event.query.count()
     total_attendees = Attendee.query.count()
@@ -536,11 +732,34 @@ def analytics_dashboard():
     )
 
 
-@app.route('/organizer/event/<int:event_id>/analytics')
-@login_required
+def check_event_dashboard_access(event_id):
+    """Helper function to check if user has dashboard access for an event."""
+    from flask import session
+    event = Event.query.get_or_404(event_id)
+    
+    # Admin has access
+    if session.get('is_admin'):
+        return True, event
+    
+    # Event creator has access
+    if current_user.is_authenticated and event.creator_id == current_user.id:
+        return True, event
+    
+    # Passcode session access
+    session_key = f'event_{event_id}_access'
+    if session.get(session_key):
+        return True, event
+    
+    return False, event
+
+
+@app.route('/event/<int:event_id>/analytics')
 def event_analytics(event_id):
     """Analytics dashboard for a specific event."""
-    event = Event.query.get_or_404(event_id)
+    has_access, event = check_event_dashboard_access(event_id)
+    if not has_access:
+        flash('Please enter the event passcode to access the dashboard.', 'warning')
+        return redirect(url_for('event_dashboard', event_id=event_id))
     
     # Basic stats for this event
     total_rsvps = len(event.attendances)
@@ -601,10 +820,18 @@ def event_analytics(event_id):
         recent_rsvps=recent_rsvps
     )
 
+# Legacy redirect
+@app.route('/organizer/event/<int:event_id>/analytics')
+def event_analytics_legacy(event_id):
+    return redirect(url_for('event_analytics', event_id=event_id))
 
-@app.route('/organizer/event/<int:event_id>/checkin/<int:attendance_id>', methods=['POST'])
-@login_required
+
+@app.route('/event/<int:event_id>/checkin/<int:attendance_id>', methods=['POST'])
 def check_in_attendee(event_id, attendance_id):
+    has_access, event = check_event_dashboard_access(event_id)
+    if not has_access:
+        return jsonify({'error': 'Access denied'}), 403
+    
     attendance = Attendance.query.get_or_404(attendance_id)
     if attendance.event_id != event_id:
         return jsonify({'error': 'Invalid attendance'}), 400
@@ -619,10 +846,18 @@ def check_in_attendee(event_id, attendance_id):
     flash(f'{attendance.attendee.name} checked in successfully')
     return redirect(url_for('event_attendees', event_id=event_id))
 
+# Legacy redirect
+@app.route('/organizer/event/<int:event_id>/checkin/<int:attendance_id>', methods=['POST'])
+def check_in_attendee_legacy(event_id, attendance_id):
+    return redirect(url_for('check_in_attendee', event_id=event_id, attendance_id=attendance_id), code=307)
 
-@app.route('/organizer/event/<int:event_id>/checkout/<int:attendance_id>', methods=['POST'])
-@login_required
+
+@app.route('/event/<int:event_id>/checkout/<int:attendance_id>', methods=['POST'])
 def check_out_attendee(event_id, attendance_id):
+    has_access, event = check_event_dashboard_access(event_id)
+    if not has_access:
+        return jsonify({'error': 'Access denied'}), 403
+    
     attendance = Attendance.query.get_or_404(attendance_id)
     if attendance.event_id != event_id:
         return jsonify({'error': 'Invalid attendance'}), 400
@@ -637,21 +872,38 @@ def check_out_attendee(event_id, attendance_id):
     flash(f'{attendance.attendee.name} checked out')
     return redirect(url_for('event_attendees', event_id=event_id))
 
+# Legacy redirect
+@app.route('/organizer/event/<int:event_id>/checkout/<int:attendance_id>', methods=['POST'])
+def check_out_attendee_legacy(event_id, attendance_id):
+    return redirect(url_for('check_out_attendee', event_id=event_id, attendance_id=attendance_id), code=307)
 
-@app.route('/organizer/scanner')
-@login_required
-def qr_scanner():
+
+@app.route('/event/<int:event_id>/scanner')
+def qr_scanner(event_id):
     """QR code scanner page for quick check-ins."""
+    has_access, event = check_event_dashboard_access(event_id)
+    if not has_access:
+        flash('Please enter the event passcode to access the scanner.', 'warning')
+        return redirect(url_for('event_dashboard', event_id=event_id))
+    return render_template('scanner.html', events=[event], single_event=event)
+
+# Legacy redirect
+@app.route('/organizer/scanner')
+def qr_scanner_legacy():
+    from flask import session
+    if not session.get('is_admin'):
+        flash('Admin access required for global scanner.', 'danger')
+        return redirect(url_for('organizer_login'))
     events = Event.query.order_by(Event.datetime.desc()).all()
     return render_template('scanner.html', events=events)
 
 
 @app.route('/api/checkin/qr', methods=['POST'])
-@login_required
 def qr_checkin():
     """Check in an attendee via QR code token."""
     data = request.get_json() or {}
     token = data.get('token', '').strip()
+    event_id = data.get('event_id')
     
     if not token:
         return jsonify({'success': False, 'error': 'No QR code token provided'}), 400
@@ -661,6 +913,19 @@ def qr_checkin():
     
     if not attendance:
         return jsonify({'success': False, 'error': 'Invalid QR code - ticket not found'}), 404
+    
+    # If event_id provided, check access for that event
+    if event_id:
+        has_access, _ = check_event_dashboard_access(int(event_id))
+        if not has_access:
+            return jsonify({'success': False, 'error': 'Access denied'}), 403
+        if attendance.event_id != int(event_id):
+            return jsonify({'success': False, 'error': 'This ticket is for a different event'}), 400
+    else:
+        # For admin-level scanner, check admin access
+        from flask import session
+        if not session.get('is_admin'):
+            return jsonify({'success': False, 'error': 'Access denied'}), 403
     
     if attendance.checked_in:
         return jsonify({
@@ -752,10 +1017,13 @@ def api_analytics():
         'check_in_stats': {'total': total_rsvps, 'checked_in': checked_in}
     })
 
-@app.route('/organizer/event/<int:event_id>/attendees')
-@login_required
+@app.route('/event/<int:event_id>/attendees')
 def event_attendees(event_id):
-    event = Event.query.get_or_404(event_id)
+    has_access, event = check_event_dashboard_access(event_id)
+    if not has_access:
+        flash('Please enter the event passcode to access attendees.', 'warning')
+        return redirect(url_for('event_dashboard', event_id=event_id))
+    
     status_filter = request.args.get('status')
     type_filter = request.args.get('type')
     search_query = request.args.get('q', '').strip().lower()
@@ -783,10 +1051,18 @@ def event_attendees(event_id):
         attendances = [a for a in attendances if a.attendee.status == status_filter]
     return render_template('attendees.html', event=event, attendances=attendances)
 
-@app.route('/organizer/event/<int:event_id>/attendees/export')
-@login_required
+# Legacy redirect
+@app.route('/organizer/event/<int:event_id>/attendees')
+def event_attendees_legacy(event_id):
+    return redirect(url_for('event_attendees', event_id=event_id))
+
+
+@app.route('/event/<int:event_id>/attendees/export')
 def export_attendees(event_id):
-    event = Event.query.get_or_404(event_id)
+    has_access, event = check_event_dashboard_access(event_id)
+    if not has_access:
+        return redirect(url_for('event_dashboard', event_id=event_id))
+    
     si = []
     for a in event.attendances:
         si.append([a.attendee.name, a.attendee.email, a.attendee.contact, a.attendee.status, a.timestamp])
@@ -795,15 +1071,22 @@ def export_attendees(event_id):
                      mimetype='text/csv',
                      download_name=f"event_{event_id}_attendees.csv")
 
-@app.route('/organizer/event/<int:event_id>/attendees/export-pdf')
-@login_required
+# Legacy redirect
+@app.route('/organizer/event/<int:event_id>/attendees/export')
+def export_attendees_legacy(event_id):
+    return redirect(url_for('export_attendees', event_id=event_id))
+
+
+@app.route('/event/<int:event_id>/attendees/export-pdf')
 def export_attendees_pdf(event_id):
     """Export attendees list as a styled PDF document."""
+    has_access, event = check_event_dashboard_access(event_id)
+    if not has_access:
+        return redirect(url_for('event_dashboard', event_id=event_id))
+    
     if not REPORTLAB_AVAILABLE:
         flash('PDF export is not available on this server.', 'error')
-        return redirect(url_for('view_attendees', event_id=event_id))
-    
-    event = Event.query.get_or_404(event_id)
+        return redirect(url_for('event_attendees', event_id=event_id))
     
     # Create PDF buffer
     buffer = io.BytesIO()
@@ -900,6 +1183,12 @@ def export_attendees_pdf(event_id):
         mimetype='application/pdf',
         download_name=f"event_{event_id}_attendees.pdf"
     )
+
+# Legacy redirect
+@app.route('/organizer/event/<int:event_id>/attendees/export-pdf')
+def export_attendees_pdf_legacy(event_id):
+    return redirect(url_for('export_attendees_pdf', event_id=event_id))
+
 
 def generate_qr_code_base64(data):
     """Generate a QR code and return as base64 string."""
@@ -1213,6 +1502,10 @@ def api_event_detail(event_id):
 
 @app.route('/api/rsvp', methods=['POST'])
 def api_rsvp():
+    # Require authentication for API RSVP
+    if not current_user.is_authenticated:
+        return jsonify({'error': 'Authentication required. Please login first.', 'redirect': url_for('user_login')}), 401
+    
     try:
         payload = request.get_json() or {}
         event_id = payload.get('event_id')
@@ -1220,39 +1513,31 @@ def api_rsvp():
             return jsonify({'error':'event_id required'}), 400
         event = Event.query.get_or_404(int(event_id))
         
-        attendee = None
-        email = payload.get('email')
-        attendee_id = payload.get('attendee_id')
-        
-        # If attendee_id provided, try to load them
-        if attendee_id:
-            attendee = Attendee.query.get(int(attendee_id))
+        # Find or create attendee linked to user
+        attendee = Attendee.query.filter_by(user_id=current_user.id).first()
+        if not attendee:
+            # Try to find by email
+            attendee = Attendee.query.filter_by(email=current_user.email).first()
             if attendee:
-                attendee.name = payload.get('name', attendee.name)
-                attendee.email = payload.get('email', attendee.email)
-                attendee.contact = payload.get('contact', attendee.contact)
-                attendee.status = payload.get('status', attendee.status)
-        
-        # If no attendee yet, try to find by email or create new
-        if not attendee and email:
-            attendee = Attendee.query.filter_by(email=email).first()
-            if attendee:
-                # Update existing attendee's info
-                attendee.name = payload.get('name', attendee.name)
-                attendee.contact = payload.get('contact', attendee.contact)
-                attendee.status = payload.get('status', attendee.status)
+                attendee.user_id = current_user.id
             else:
-                # Create new attendee
+                # Create new attendee linked to user
                 attendee = Attendee(
-                    name=payload.get('name'),
-                    email=email,
+                    name=payload.get('name', current_user.name),
+                    email=current_user.email,
                     contact=payload.get('contact'),
-                    status=payload.get('status')
+                    status=payload.get('status'),
+                    user_id=current_user.id
                 )
                 db.session.add(attendee)
         
-        if not attendee:
-            return jsonify({'error': 'email or attendee_id required'}), 400
+        # Update attendee info
+        if payload.get('name'):
+            attendee.name = payload.get('name')
+        if payload.get('contact'):
+            attendee.contact = payload.get('contact')
+        if payload.get('status'):
+            attendee.status = payload.get('status')
         
         # Flush to ensure attendee has an ID
         db.session.flush()

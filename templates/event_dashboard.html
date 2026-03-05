@@ -1,0 +1,254 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard - {{ event.name }}{% endblock %}
+{% block content %}
+<style>
+    .dashboard-container {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 2rem 1rem;
+    }
+    .dashboard-header {
+        margin-bottom: 2rem;
+    }
+    .back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #6b7280;
+        font-size: 0.875rem;
+        text-decoration: none;
+        margin-bottom: 1rem;
+        transition: color 0.2s ease;
+    }
+    .back-link:hover {
+        color: #06b6d4;
+    }
+    .event-title {
+        font-family: 'Syne', sans-serif;
+        font-size: 2rem;
+        font-weight: 700;
+        color: #fff;
+        margin-bottom: 0.5rem;
+    }
+    .event-subtitle {
+        color: #9ca3af;
+        font-size: 0.95rem;
+    }
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 1.5rem;
+    }
+    .dashboard-card {
+        background: rgba(255, 255, 255, 0.03);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 16px;
+        padding: 1.5rem;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: block;
+        box-shadow: 
+            0 8px 32px rgba(0, 0, 0, 0.3),
+            inset 0 1px 0 rgba(255, 255, 255, 0.1),
+            inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+    }
+    .dashboard-card:hover {
+        border-color: rgba(6, 182, 212, 0.3);
+        transform: translateY(-4px);
+        box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        background: rgba(255, 255, 255, 0.06);
+        text-decoration: none;
+    }
+    .card-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 1rem;
+    }
+    .card-icon.cyan {
+        background: rgba(6, 182, 212, 0.1);
+        border: 1px solid rgba(6, 182, 212, 0.2);
+        color: #06b6d4;
+    }
+    .card-icon.green {
+        background: rgba(34, 197, 94, 0.1);
+        border: 1px solid rgba(34, 197, 94, 0.2);
+        color: #22c55e;
+    }
+    .card-icon.purple {
+        background: rgba(168, 85, 247, 0.1);
+        border: 1px solid rgba(168, 85, 247, 0.2);
+        color: #a855f7;
+    }
+    .card-icon.amber {
+        background: rgba(245, 158, 11, 0.1);
+        border: 1px solid rgba(245, 158, 11, 0.2);
+        color: #f59e0b;
+    }
+    .card-title {
+        font-family: 'Syne', sans-serif;
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: #fff;
+        margin-bottom: 0.5rem;
+    }
+    .card-description {
+        color: #9ca3af;
+        font-size: 0.875rem;
+        line-height: 1.5;
+    }
+    .stats-section {
+        margin-bottom: 2rem;
+    }
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+    .stat-card {
+        background: rgba(255, 255, 255, 0.03);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 12px;
+        padding: 1.25rem;
+        text-align: center;
+    }
+    .stat-value {
+        font-family: 'Syne', sans-serif;
+        font-size: 2rem;
+        font-weight: 700;
+        color: #06b6d4;
+    }
+    .stat-label {
+        color: #9ca3af;
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+    }
+    
+    @media (max-width: 768px) {
+        .event-title {
+            font-size: 1.5rem;
+        }
+        .dashboard-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div class="dashboard-container">
+    <div class="dashboard-header">
+        <a href="{{ url_for('index') }}" class="back-link">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+            Back to Events
+        </a>
+        <h1 class="event-title">{{ event.name }}</h1>
+        <p class="event-subtitle">
+            {{ event.datetime.strftime('%B %d, %Y at %I:%M %p') if event.datetime else 'Date TBA' }}
+            {% if event.venue %} · {{ event.venue }}{% endif %}
+        </p>
+    </div>
+    
+    <div class="stats-section">
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value">{{ event.attendances|length }}</div>
+                <div class="stat-label">Total RSVPs</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ event.attendances|selectattr('checked_in')|list|length }}</div>
+                <div class="stat-label">Checked In</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">
+                    {% set total = event.attendances|length %}
+                    {% set checked = event.attendances|selectattr('checked_in')|list|length %}
+                    {{ ((checked / total * 100)|round|int) if total > 0 else 0 }}%
+                </div>
+                <div class="stat-label">Check-in Rate</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="dashboard-grid">
+        <a href="{{ url_for('event_attendees', event_id=event.id) }}" class="dashboard-card">
+            <div class="card-icon cyan">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="9" cy="7" r="4"></circle>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                </svg>
+            </div>
+            <h3 class="card-title">Attendees</h3>
+            <p class="card-description">View and manage all registered attendees for this event.</p>
+        </a>
+        
+        <a href="{{ url_for('qr_scanner', event_id=event.id) }}" class="dashboard-card">
+            <div class="card-icon green">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="7" height="7"></rect>
+                    <rect x="14" y="3" width="7" height="7"></rect>
+                    <rect x="14" y="14" width="7" height="7"></rect>
+                    <rect x="3" y="14" width="7" height="7"></rect>
+                </svg>
+            </div>
+            <h3 class="card-title">QR Scanner</h3>
+            <p class="card-description">Scan QR codes to check in attendees quickly.</p>
+        </a>
+        
+        <a href="{{ url_for('event_analytics', event_id=event.id) }}" class="dashboard-card">
+            <div class="card-icon purple">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                </svg>
+            </div>
+            <h3 class="card-title">Analytics</h3>
+            <p class="card-description">View detailed analytics and insights for this event.</p>
+        </a>
+        
+        <a href="{{ url_for('edit_event', event_id=event.id) }}" class="dashboard-card">
+            <div class="card-icon amber">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+            </div>
+            <h3 class="card-title">Edit Event</h3>
+            <p class="card-description">Update event details, date, venue, and more.</p>
+        </a>
+        
+        <a href="{{ url_for('export_attendees', event_id=event.id) }}" class="dashboard-card">
+            <div class="card-icon cyan">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+            </div>
+            <h3 class="card-title">Export CSV</h3>
+            <p class="card-description">Download attendee list as a CSV file.</p>
+        </a>
+        
+        <a href="{{ url_for('export_attendees_pdf', event_id=event.id) }}" class="dashboard-card">
+            <div class="card-icon green">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                    <polyline points="10 9 9 9 8 9"></polyline>
+                </svg>
+            </div>
+            <h3 class="card-title">Export PDF</h3>
+            <p class="card-description">Generate a styled PDF report of attendees.</p>
+        </a>
+    </div>
+</div>
+{% endblock %}
