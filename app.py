@@ -410,7 +410,7 @@ def signup():
         # Redirect to original destination or index
         next_page = request.args.get('next')
         return redirect(next_page or url_for('index'))
-    return render_template('signup.html', form=form)
+    return render_template('signup.html', form=form, google_oauth_available=GOOGLE_OAUTH_AVAILABLE)
 
 @app.route('/login', methods=['GET', 'POST'])
 def user_login():
