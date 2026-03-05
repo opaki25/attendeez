@@ -122,14 +122,20 @@
                 font-weight: 600;
                 padding: 0.625rem 1.5rem;
                 border-radius: 9999px;
-                transition: all 0.3s ease;
+                transition: all 0.2s ease;
                 box-shadow: 0 4px 15px rgba(6, 182, 212, 0.25);
+                cursor: pointer;
+                -webkit-tap-highlight-color: transparent;
             }
             .btn-primary-custom:hover {
                 background: linear-gradient(135deg, var(--primary-400) 0%, var(--primary-500) 100%);
                 transform: translateY(-2px);
                 box-shadow: 0 6px 20px rgba(6, 182, 212, 0.35);
                 color: #000;
+            }
+            .btn-primary-custom:active {
+                transform: translateY(0) scale(0.98);
+                box-shadow: 0 2px 10px rgba(6, 182, 212, 0.25);
             }
             .btn-outline-custom {
                 background: transparent;
@@ -138,13 +144,19 @@
                 font-weight: 500;
                 padding: 0.625rem 1.5rem;
                 border-radius: 9999px;
-                transition: all 0.3s ease;
+                transition: all 0.2s ease;
+                cursor: pointer;
+                -webkit-tap-highlight-color: transparent;
             }
             .btn-outline-custom:hover {
                 background: rgba(255,255,255,0.1);
                 border-color: rgba(255,255,255,0.3);
                 color: #fff;
                 text-decoration: none;
+            }
+            .btn-outline-custom:active {
+                transform: scale(0.98);
+                background: rgba(255,255,255,0.15);
             }
             .site-footer {
                 background: #000;
@@ -188,11 +200,31 @@
             }
             a.text-link {
                 color: #9ca3af;
-                transition: color 0.3s ease;
+                transition: color 0.2s ease, transform 0.15s ease;
+                display: inline-block;
+                -webkit-tap-highlight-color: transparent;
             }
             a.text-link:hover {
                 color: var(--primary-400);
                 text-decoration: none;
+            }
+            a.text-link:active {
+                transform: scale(0.97);
+                opacity: 0.85;
+            }
+            /* Mobile menu link styles */
+            #mobile-nav a {
+                transition: all 0.2s ease;
+                border-radius: 8px;
+                padding-left: 0.75rem !important;
+                padding-right: 0.75rem !important;
+            }
+            #mobile-nav a:hover {
+                background: rgba(255, 255, 255, 0.05);
+            }
+            #mobile-nav a:active {
+                background: rgba(255, 255, 255, 0.1);
+                transform: scale(0.98);
             }
             /* Responsive styles */
             @media (max-width: 768px) {
@@ -397,10 +429,77 @@
 <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-document.getElementById('mobile-nav-toggle')?.addEventListener('click', function(){
-    var nav = document.getElementById('mobile-nav');
-    if(nav.classList.contains('d-none')) nav.classList.remove('d-none'); else nav.classList.add('d-none');
-});
+(function() {
+    const mobileToggle = document.getElementById('mobile-nav-toggle');
+    const mobileNav = document.getElementById('mobile-nav');
+    
+    if (!mobileToggle || !mobileNav) return;
+    
+    // Add smooth transition styles
+    mobileNav.style.cssText += 'transition: opacity 0.25s ease, transform 0.25s ease; transform-origin: top center;';
+    
+    function openMenu() {
+        mobileNav.classList.remove('d-none');
+        mobileNav.style.opacity = '0';
+        mobileNav.style.transform = 'translateY(-10px)';
+        // Trigger reflow for animation
+        mobileNav.offsetHeight;
+        mobileNav.style.opacity = '1';
+        mobileNav.style.transform = 'translateY(0)';
+    }
+    
+    function closeMenu() {
+        mobileNav.style.opacity = '0';
+        mobileNav.style.transform = 'translateY(-10px)';
+        setTimeout(() => {
+            mobileNav.classList.add('d-none');
+            mobileNav.style.opacity = '';
+            mobileNav.style.transform = '';
+        }, 250);
+    }
+    
+    function isMenuOpen() {
+        return !mobileNav.classList.contains('d-none');
+    }
+    
+    // Toggle on button click
+    mobileToggle.addEventListener('click', function(e) {
+        e.stopPropagation();
+        if (isMenuOpen()) {
+            closeMenu();
+        } else {
+            openMenu();
+        }
+    });
+    
+    // Close on click anywhere outside
+    document.addEventListener('click', function(e) {
+        if (isMenuOpen() && !mobileNav.contains(e.target) && e.target !== mobileToggle) {
+            closeMenu();
+        }
+    });
+    
+    // Close on scroll
+    let lastScrollY = window.scrollY;
+    window.addEventListener('scroll', function() {
+        if (isMenuOpen() && Math.abs(window.scrollY - lastScrollY) > 10) {
+            closeMenu();
+        }
+        lastScrollY = window.scrollY;
+    }, { passive: true });
+    
+    // Close on escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && isMenuOpen()) {
+            closeMenu();
+        }
+    });
+    
+    // Close when clicking a link inside the menu
+    mobileNav.querySelectorAll('a').forEach(link => {
+        link.addEventListener('click', closeMenu);
+    });
+})();
 </script>
 </body>
 </html>
