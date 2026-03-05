@@ -42,6 +42,28 @@ else:
             print('Added reset_token_expiry column to user')
         else:
             print('reset_token_expiry column already exists in user')
+        
+        # Add profile fields to user table
+        if 'username' not in user_columns:
+            cursor.execute('ALTER TABLE user ADD COLUMN username VARCHAR(64) UNIQUE')
+            print('Added username column to user')
+        else:
+            print('username column already exists in user')
+        if 'profile_picture' not in user_columns:
+            cursor.execute('ALTER TABLE user ADD COLUMN profile_picture VARCHAR(500)')
+            print('Added profile_picture column to user')
+        else:
+            print('profile_picture column already exists in user')
+        if 'bio' not in user_columns:
+            cursor.execute('ALTER TABLE user ADD COLUMN bio TEXT')
+            print('Added bio column to user')
+        else:
+            print('bio column already exists in user')
+        if 'phone' not in user_columns:
+            cursor.execute('ALTER TABLE user ADD COLUMN phone VARCHAR(20)')
+            print('Added phone column to user')
+        else:
+            print('phone column already exists in user')
     
     # Get existing columns for event table
     cursor.execute('PRAGMA table_info(event)')

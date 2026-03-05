@@ -7,7 +7,7 @@ from flask import Flask, render_template, redirect, url_for, request, flash, sen
 from flask_sqlalchemy import SQLAlchemy
 from flask_wtf import FlaskForm
 from wtforms import StringField, TextAreaField, DateTimeField, SelectField, FileField, SubmitField, PasswordField
-from wtforms.validators import DataRequired, Email
+from wtforms.validators import DataRequired, Email, Optional
 from flask_login import LoginManager, login_user, logout_user, login_required, UserMixin, current_user
 from werkzeug.utils import secure_filename
 import csv
@@ -172,6 +172,12 @@ class User(UserMixin, db.Model):
     reset_token = db.Column(db.String(100), nullable=True)
     reset_token_expiry = db.Column(db.DateTime, nullable=True)
     
+    # Profile fields
+    username = db.Column(db.String(64), unique=True, nullable=True)
+    profile_picture = db.Column(db.String(500), nullable=True)
+    bio = db.Column(db.Text, nullable=True)
+    phone = db.Column(db.String(20), nullable=True)
+    
     # Events created by this user
     events = db.relationship('Event', back_populates='creator', lazy='dynamic')
     
@@ -305,6 +311,20 @@ class ResetPasswordForm(FlaskForm):
     password = PasswordField('New Password', validators=[DataRequired()])
     confirm_password = PasswordField('Confirm Password', validators=[DataRequired()])
     submit = SubmitField('Reset Password')
+
+class ProfileForm(FlaskForm):
+    name = StringField('Full Name', validators=[DataRequired()])
+    username = StringField('Username', validators=[Optional()])
+    bio = TextAreaField('Bio', validators=[Optional()])
+    phone = StringField('Phone Number', validators=[Optional()])
+    profile_picture = FileField('Profile Picture', validators=[Optional()])
+    submit = SubmitField('Save Changes')
+
+class ChangePasswordForm(FlaskForm):
+    current_password = PasswordField('Current Password', validators=[DataRequired()])
+    new_password = PasswordField('New Password', validators=[DataRequired()])
+    confirm_password = PasswordField('Confirm New Password', validators=[DataRequired()])
+    submit = SubmitField('Change Password')
 
 # Routes
 @app.route('/debug/supabase')
@@ -663,6 +683,58 @@ def my_rsvps():
         past_rsvps.sort(key=lambda r: r.event.datetime, reverse=True)
     
     return render_template('my_rsvps.html', current_rsvps=current_rsvps, past_rsvps=past_rsvps)
+
+@app.route('/profile', methods=['GET', 'POST'])
+@login_required
+def profile():
+    """User profile page"""
+    form = ProfileForm(obj=current_user)
+    password_form = ChangePasswordForm()
+    
+    if form.validate_on_submit() and 'profile_submit' in request.form:
+        # Check if username is unique (if changed)
+        if form.username.data and form.username.data != current_user.username:
+            existing = User.query.filter_by(username=form.username.data).first()
+            if existing and existing.id != current_user.id:
+                flash('Username already taken. Please choose another.', 'danger')
+                return render_template('profile.html', form=form, password_form=password_form)
+        
+        current_user.name = form.name.data
+        current_user.username = form.username.data if form.username.data else None
+        current_user.bio = form.bio.data
+        current_user.phone = form.phone.data
+        
+        # Handle profile picture upload
+        if form.profile_picture.data:
+            f = form.profile_picture.data
+            # Try Supabase Storage first (for production)
+            if supabase_client:
+                public_url = upload_to_supabase(f, f.filename)
+                if public_url:
+                    current_user.profile_picture = public_url
+            # Fallback to local storage
+            if not current_user.profile_picture or not current_user.profile_picture.startswith('http'):
+                filename = secure_filename(f.filename)
+                f.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                current_user.profile_picture = filename
+        
+        db.session.commit()
+        flash('Profile updated successfully!', 'success')
+        return redirect(url_for('profile'))
+    
+    # Handle password change
+    if password_form.validate_on_submit() and 'password_submit' in request.form:
+        if not current_user.check_password(password_form.current_password.data):
+            flash('Current password is incorrect.', 'danger')
+        elif password_form.new_password.data != password_form.confirm_password.data:
+            flash('New passwords do not match.', 'danger')
+        else:
+            current_user.set_password(password_form.new_password.data)
+            db.session.commit()
+            flash('Password changed successfully!', 'success')
+            return redirect(url_for('profile'))
+    
+    return render_template('profile.html', form=form, password_form=password_form)
 
 @app.route('/')
 def index():
@@ -1883,6 +1955,19 @@ try:
             if 'reset_token_expiry' not in user_columns:
                 db.session.execute(text('ALTER TABLE "user" ADD COLUMN reset_token_expiry TIMESTAMP'))
                 print('Added reset_token_expiry column to user')
+            # Profile fields
+            if 'username' not in user_columns:
+                db.session.execute(text('ALTER TABLE "user" ADD COLUMN username VARCHAR(64)'))
+                print('Added username column to user')
+            if 'profile_picture' not in user_columns:
+                db.session.execute(text('ALTER TABLE "user" ADD COLUMN profile_picture VARCHAR(500)'))
+                print('Added profile_picture column to user')
+            if 'bio' not in user_columns:
+                db.session.execute(text('ALTER TABLE "user" ADD COLUMN bio TEXT'))
+                print('Added bio column to user')
+            if 'phone' not in user_columns:
+                db.session.execute(text('ALTER TABLE "user" ADD COLUMN phone VARCHAR(20)'))
+                print('Added phone column to user')
         
         # Check and add columns to event table
         if 'event' in inspector.get_table_names():

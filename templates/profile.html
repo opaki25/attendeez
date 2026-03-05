@@ -1,0 +1,381 @@
+{% extends 'base.html' %}
+{% block title %}My Profile - ATTENDEEZ{% endblock %}
+{% block content %}
+<style>
+    .profile-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 1rem;
+    }
+    .profile-header {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    .profile-avatar {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 3px solid rgba(6, 182, 212, 0.3);
+        background: rgba(255, 255, 255, 0.05);
+        margin-bottom: 1rem;
+    }
+    .avatar-placeholder {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, rgba(6, 182, 212, 0.2), rgba(34, 211, 238, 0.1));
+        border: 3px solid rgba(6, 182, 212, 0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1rem;
+        color: #06b6d4;
+        font-size: 3rem;
+        font-weight: 700;
+    }
+    .profile-name {
+        font-family: 'Syne', sans-serif;
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #fff;
+        margin-bottom: 0.25rem;
+    }
+    .profile-username {
+        color: #06b6d4;
+        font-size: 0.95rem;
+    }
+    .profile-email {
+        color: #6b7280;
+        font-size: 0.9rem;
+    }
+    .profile-card {
+        background: rgba(255, 255, 255, 0.03);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 20px;
+        padding: 2rem;
+        margin-bottom: 1.5rem;
+    }
+    .card-title {
+        font-family: 'Syne', sans-serif;
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #fff;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    .card-title svg {
+        color: #06b6d4;
+    }
+    .form-group {
+        margin-bottom: 1.25rem;
+    }
+    .form-label {
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #9ca3af;
+        margin-bottom: 0.5rem;
+    }
+    .form-input {
+        width: 100%;
+        padding: 0.875rem 1rem;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        color: #fff;
+        font-size: 1rem;
+        transition: all 0.2s ease;
+    }
+    .form-input:focus {
+        outline: none;
+        border-color: #06b6d4;
+        box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.1);
+        background: rgba(255, 255, 255, 0.05);
+    }
+    .form-input::placeholder {
+        color: #4b5563;
+    }
+    textarea.form-input {
+        min-height: 100px;
+        resize: vertical;
+    }
+    .form-row {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+    }
+    @media (max-width: 640px) {
+        .form-row {
+            grid-template-columns: 1fr;
+        }
+    }
+    .btn-save {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 0.875rem 2rem;
+        background: linear-gradient(135deg, #06b6d4 0%, #22d3ee 100%);
+        border: none;
+        border-radius: 12px;
+        color: #000;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 4px 15px rgba(6, 182, 212, 0.3);
+    }
+    .btn-save:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 25px rgba(6, 182, 212, 0.4);
+    }
+    .btn-save:active {
+        transform: translateY(0) scale(0.98);
+    }
+    .file-input-wrapper {
+        position: relative;
+        display: inline-block;
+    }
+    .file-input-wrapper input[type="file"] {
+        position: absolute;
+        left: 0;
+        top: 0;
+        opacity: 0;
+        cursor: pointer;
+        width: 100%;
+        height: 100%;
+    }
+    .file-input-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1.5rem;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px dashed rgba(255, 255, 255, 0.2);
+        border-radius: 12px;
+        color: #9ca3af;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    .file-input-btn:hover {
+        background: rgba(255, 255, 255, 0.08);
+        border-color: #06b6d4;
+        color: #06b6d4;
+    }
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+        margin-top: 1.5rem;
+    }
+    @media (max-width: 640px) {
+        .stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+    .stat-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 12px;
+        padding: 1rem;
+        text-align: center;
+    }
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #06b6d4;
+    }
+    .stat-label {
+        font-size: 0.8rem;
+        color: #6b7280;
+        margin-top: 0.25rem;
+    }
+    .danger-zone {
+        border-color: rgba(239, 68, 68, 0.2);
+    }
+    .danger-zone .card-title svg {
+        color: #ef4444;
+    }
+    .btn-danger {
+        background: rgba(239, 68, 68, 0.1);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        color: #f87171;
+    }
+    .btn-danger:hover {
+        background: rgba(239, 68, 68, 0.2);
+    }
+</style>
+
+<div class="profile-container">
+    <!-- Profile Header -->
+    <div class="profile-header">
+        {% if current_user.profile_picture %}
+            {% if current_user.profile_picture.startswith('http') %}
+                <img src="{{ current_user.profile_picture }}" alt="Profile" class="profile-avatar">
+            {% else %}
+                <img src="{{ url_for('static', filename='uploads/' + current_user.profile_picture) }}" alt="Profile" class="profile-avatar">
+            {% endif %}
+        {% else %}
+            <div class="avatar-placeholder">
+                {{ current_user.name[0].upper() }}
+            </div>
+        {% endif %}
+        <h1 class="profile-name">{{ current_user.name }}</h1>
+        {% if current_user.username %}
+            <p class="profile-username">@{{ current_user.username }}</p>
+        {% endif %}
+        <p class="profile-email">{{ current_user.email }}</p>
+        
+        <!-- Quick Stats -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value">{{ current_user.events.count() }}</div>
+                <div class="stat-label">Events Created</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ (current_user.created_at.strftime('%b %Y')) }}</div>
+                <div class="stat-label">Member Since</div>
+            </div>
+            <div class="stat-card">
+                {% set total_attendees = namespace(count=0) %}
+                {% for event in current_user.events %}
+                    {% set total_attendees.count = total_attendees.count + event.attendances|length %}
+                {% endfor %}
+                <div class="stat-value">{{ total_attendees.count }}</div>
+                <div class="stat-label">Total Attendees</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Edit Profile Card -->
+    <div class="profile-card">
+        <h2 class="card-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+            Edit Profile
+        </h2>
+        
+        <form method="POST" enctype="multipart/form-data">
+            {{ form.hidden_tag() }}
+            
+            <div class="form-row">
+                <div class="form-group">
+                    {{ form.name.label(class="form-label") }}
+                    {{ form.name(class="form-input", placeholder="Your full name") }}
+                </div>
+                <div class="form-group">
+                    {{ form.username.label(class="form-label") }}
+                    {{ form.username(class="form-input", placeholder="Choose a username") }}
+                </div>
+            </div>
+            
+            <div class="form-group">
+                {{ form.bio.label(class="form-label") }}
+                {{ form.bio(class="form-input", placeholder="Tell us about yourself...", rows="3") }}
+            </div>
+            
+            <div class="form-group">
+                {{ form.phone.label(class="form-label") }}
+                {{ form.phone(class="form-input", placeholder="Your phone number") }}
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Profile Picture</label>
+                <div class="file-input-wrapper">
+                    <div class="file-input-btn">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                        Choose Image
+                    </div>
+                    {{ form.profile_picture(accept="image/*") }}
+                </div>
+                <p class="small text-muted mt-2">JPG, PNG or GIF. Max 5MB.</p>
+            </div>
+            
+            <button type="submit" name="profile_submit" class="btn-save">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                    <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                    <polyline points="7 3 7 8 15 8"></polyline>
+                </svg>
+                Save Changes
+            </button>
+        </form>
+    </div>
+    
+    <!-- Change Password Card -->
+    <div class="profile-card">
+        <h2 class="card-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+            Change Password
+        </h2>
+        
+        <form method="POST">
+            {{ password_form.hidden_tag() }}
+            
+            <div class="form-group">
+                {{ password_form.current_password.label(class="form-label") }}
+                {{ password_form.current_password(class="form-input", placeholder="Enter current password") }}
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    {{ password_form.new_password.label(class="form-label") }}
+                    {{ password_form.new_password(class="form-input", placeholder="Enter new password") }}
+                </div>
+                <div class="form-group">
+                    {{ password_form.confirm_password.label(class="form-label") }}
+                    {{ password_form.confirm_password(class="form-input", placeholder="Confirm new password") }}
+                </div>
+            </div>
+            
+            <button type="submit" name="password_submit" class="btn-save" style="background: rgba(255,255,255,0.05); color: #e5e5e5; box-shadow: none; border: 1px solid rgba(255,255,255,0.1);">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+                Update Password
+            </button>
+        </form>
+    </div>
+    
+    <!-- Account Info -->
+    <div class="profile-card" style="background: rgba(6, 182, 212, 0.03); border-color: rgba(6, 182, 212, 0.15);">
+        <h2 class="card-title">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="16" x2="12" y2="12"></line>
+                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+            Account Information
+        </h2>
+        <div style="display: grid; gap: 0.75rem; font-size: 0.9rem;">
+            <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                <span style="color: #6b7280;">Email</span>
+                <span style="color: #e5e5e5;">{{ current_user.email }}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                <span style="color: #6b7280;">Account Created</span>
+                <span style="color: #e5e5e5;">{{ current_user.created_at.strftime('%B %d, %Y') }}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 0.5rem 0;">
+                <span style="color: #6b7280;">Account ID</span>
+                <span style="color: #e5e5e5;">#{{ current_user.id }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
