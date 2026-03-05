@@ -14,8 +14,16 @@
         <!-- Favicon -->
         <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='app-icon.svg') }}">
         <link rel="shortcut icon" href="{{ url_for('static', filename='app-icon.svg') }}">
-        <link rel="apple-touch-icon" href="{{ url_for('static', filename='app-icon.svg') }}">
+        <!-- iOS App Icons (PNG required for iOS) -->
+        <link rel="apple-touch-icon" href="{{ url_for('static', filename='app-icon-180.png') }}">
+        <link rel="apple-touch-icon" sizes="152x152" href="{{ url_for('static', filename='app-icon-152.png') }}">
+        <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='app-icon-180.png') }}">
+        <link rel="apple-touch-icon" sizes="192x192" href="{{ url_for('static', filename='app-icon-192.png') }}">
         <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+        <!-- iOS PWA Settings -->
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+        <meta name="apple-mobile-web-app-title" content="ATTENDEEZ">
         
         <!-- Open Graph / Facebook -->
         <meta property="og:type" content="website">
