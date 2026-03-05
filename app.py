@@ -206,11 +206,11 @@ class User(UserMixin, db.Model):
     
     def generate_reset_token(self):
         self.reset_token = uuid.uuid4().hex
-        self.reset_token_expiry = datetime.now(timezone.utc) + timedelta(hours=1)
+        self.reset_token_expiry = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=1)
         return self.reset_token
     
     def verify_reset_token(self, token):
-        if self.reset_token == token and self.reset_token_expiry > datetime.now(timezone.utc):
+        if self.reset_token == token and self.reset_token_expiry > datetime.now(timezone.utc).replace(tzinfo=None):
             return True
         return False
     
@@ -659,7 +659,7 @@ def reset_password(token):
 @login_required
 def my_events():
     """Show events created by the current user."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)  # Naive UTC for DB comparison
     all_events = current_user.events.all()
     
     # Separate current and past events
@@ -676,7 +676,7 @@ def my_events():
 @login_required
 def my_rsvps():
     """Show events the user has RSVP'd to."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)  # Naive UTC for DB comparison
     # Find attendee profile linked to user
     attendee = Attendee.query.filter_by(user_id=current_user.id).first()
     current_rsvps = []
@@ -768,7 +768,7 @@ def public_profile(user_id):
     user = User.query.get_or_404(user_id)
     
     # Get user's public events (upcoming and past)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)  # Naive UTC for DB comparison
     upcoming_events = Event.query.filter(
         Event.created_by == user.id,
         Event.datetime != None,
@@ -789,7 +789,7 @@ def google_verification():
 
 @app.route('/')
 def index():
-    now = datetime.now(timezone.utc)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)  # Naive UTC for DB comparison
     # Only show upcoming events on homepage (soonest first)
     events = Event.query.filter(
         Event.datetime != None,
@@ -1243,7 +1243,7 @@ def check_in_attendee(event_id, attendance_id):
         return jsonify({'error': 'Invalid attendance'}), 400
     
     attendance.checked_in = True
-    attendance.check_in_time = datetime.now(timezone.utc)
+    attendance.check_in_time = datetime.now(timezone.utc).replace(tzinfo=None)
     db.session.commit()
     
     if request.headers.get('Accept') == 'application/json':
@@ -1347,7 +1347,7 @@ def qr_checkin():
     
     # Check in the attendee
     attendance.checked_in = True
-    attendance.check_in_time = datetime.now(timezone.utc)
+    attendance.check_in_time = datetime.now(timezone.utc).replace(tzinfo=None)
     db.session.commit()
     
     return jsonify({
