@@ -293,6 +293,10 @@ class PasscodeForm(FlaskForm):
     passcode = PasswordField('Dashboard Passcode', validators=[DataRequired()])
     submit = SubmitField('Access Dashboard')
 
+class JoinDashboardForm(FlaskForm):
+    passcode = StringField('Event Passcode', validators=[DataRequired()])
+    submit = SubmitField('Join Dashboard')
+
 class ForgotPasswordForm(FlaskForm):
     email = StringField('Email Address', validators=[DataRequired(), Email()])
     submit = SubmitField('Send Reset Link')
@@ -878,6 +882,28 @@ def event_dashboard(event_id):
             flash('Invalid passcode', 'danger')
     
     return render_template('event_passcode.html', event=event, form=form)
+
+@app.route('/join-dashboard', methods=['GET', 'POST'])
+@login_required
+def join_dashboard():
+    """Join any event dashboard using the passcode"""
+    form = JoinDashboardForm()
+    
+    if form.validate_on_submit():
+        passcode = form.passcode.data.strip()
+        # Find event with matching passcode
+        event = Event.query.filter_by(passcode=passcode).first()
+        
+        if event:
+            from flask import session
+            session_key = f'event_{event.id}_access'
+            session[session_key] = True
+            flash(f'Access granted to "{event.name}" dashboard!', 'success')
+            return redirect(url_for('event_dashboard', event_id=event.id))
+        else:
+            flash('No event found with that passcode. Please check and try again.', 'danger')
+    
+    return render_template('join_dashboard.html', form=form)
 
 @app.route('/event/<int:event_id>/edit', methods=['GET', 'POST'])
 @login_required

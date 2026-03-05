@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+        <div class="card" style="background: rgba(15,15,15,0.95); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; overflow: hidden;">
+            <div class="card-body p-4 p-md-5">
+                <div class="text-center mb-4">
+                    <div style="width: 60px; height: 60px; background: linear-gradient(135deg, var(--primary-500), var(--primary-400)); border-radius: 16px; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem;">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+                            <polyline points="10 17 15 12 10 7"/>
+                            <line x1="15" y1="12" x2="3" y2="12"/>
+                        </svg>
+                    </div>
+                    <h2 class="mb-2" style="font-weight: 700; font-size: 1.75rem;">Join Event Dashboard</h2>
+                    <p class="text-muted mb-0">Enter the passcode shared by your team to access the event dashboard</p>
+                </div>
+                
+                <form method="POST" action="{{ url_for('join_dashboard') }}">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="mb-4">
+                        <label class="form-label small text-muted mb-2">Event Passcode</label>
+                        {{ form.passcode(class="form-control", placeholder="Enter the event passcode", style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); color: #fff; border-radius: 12px; padding: 0.875rem 1rem; font-size: 1rem;") }}
+                        {% if form.passcode.errors %}
+                            <small class="text-danger">{{ form.passcode.errors[0] }}</small>
+                        {% endif %}
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary-custom w-100" style="padding: 0.875rem; font-size: 1rem; border-radius: 12px;">
+                        Join Dashboard
+                    </button>
+                </form>
+                
+                <div class="text-center mt-4 pt-3" style="border-top: 1px solid rgba(255,255,255,0.08);">
+                    <p class="small text-muted mb-2">Don't have a passcode?</p>
+                    <p class="small text-muted">Ask your event organizer to share the dashboard passcode with you.</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="text-center mt-4">
+            <a href="{{ url_for('my_events') }}" class="text-link small">← Back to My Events</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

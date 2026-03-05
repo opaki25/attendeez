@@ -328,6 +328,7 @@
             {% if current_user.is_authenticated %}
                 <a class="btn-outline-custom" href="{{ url_for('my_events') }}">My Events</a>
                 <a class="btn-outline-custom" href="{{ url_for('my_rsvps') }}">My RSVPs</a>
+                <a class="btn-outline-custom" href="{{ url_for('join_dashboard') }}">Join Dashboard</a>
                 <a class="btn-primary-custom" href="{{ url_for('create_event') }}">Create Event</a>
                 <a class="text-link small" href="{{ url_for('user_logout') }}">Logout</a>
             {% else %}
@@ -343,6 +344,7 @@
             {% if current_user.is_authenticated %}
                 <a class="d-block py-2 text-link" href="{{ url_for('my_events') }}">My Events</a>
                 <a class="d-block py-2 text-link" href="{{ url_for('my_rsvps') }}">My RSVPs</a>
+                <a class="d-block py-2 text-link" href="{{ url_for('join_dashboard') }}">Join Dashboard</a>
                 <a class="d-block py-2 text-link" href="{{ url_for('create_event') }}">Create Event</a>
                 <a class="d-block py-2 text-link" href="{{ url_for('user_logout') }}">Logout</a>
             {% else %}
