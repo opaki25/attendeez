@@ -657,78 +657,85 @@ def event_detail(event_id):
 @app.route('/rsvp/<int:event_id>', methods=['GET','POST'])
 @login_required
 def rsvp(event_id):
-    event = Event.query.get_or_404(event_id)
-    form = AttendeeForm()
-    
-    # Pre-fill form with user's info if available
-    if request.method == 'GET':
-        form.name.data = current_user.name
-        form.email.data = current_user.email
-        # Try to get existing attendee profile
-        existing_attendee = Attendee.query.filter_by(user_id=current_user.id).first()
-        if existing_attendee:
-            form.contact.data = existing_attendee.contact
-            form.status.data = existing_attendee.status
-    
-    if form.validate_on_submit():
-        try:
-            # Find or create attendee profile linked to user
-            attendee = Attendee.query.filter_by(user_id=current_user.id).first()
-            if not attendee:
-                # Try to find by email
-                attendee = Attendee.query.filter_by(email=current_user.email).first()
-                if attendee:
-                    attendee.user_id = current_user.id
-                else:
-                    # Create new attendee
-                    attendee = Attendee(
-                        name=form.name.data,
-                        email=current_user.email,
-                        contact=form.contact.data,
-                        status=form.status.data,
-                        user_id=current_user.id
-                    )
-                    db.session.add(attendee)
-            
-            # Update attendee info
-            attendee.name = form.name.data
-            attendee.contact = form.contact.data
-            attendee.status = form.status.data
-            
-            # Flush to ensure attendee has an ID
-            db.session.flush()
-            
-            # Check if already registered for this event
-            existing_attendance = Attendance.query.filter_by(
-                event_id=event_id,
-                attendee_id=attendee.id
-            ).first()
-            if existing_attendance:
-                flash('You have already registered for this event!', 'warning')
-                return render_template('rsvp.html', event=event, form=form)
-            
-            # Create attendance record
-            attendance = Attendance(event_id=event_id, attendee_id=attendee.id)
-            attendance.generate_token()  # Generate unique QR token
-            db.session.add(attendance)
-            db.session.commit()
-            
-            # Send email confirmation with QR code (non-blocking)
+    try:
+        event = Event.query.get_or_404(event_id)
+        form = AttendeeForm()
+        
+        # Pre-fill form with user's info if available
+        if request.method == 'GET':
+            form.name.data = current_user.name
+            form.email.data = current_user.email
+            # Try to get existing attendee profile
+            existing_attendee = Attendee.query.filter_by(user_id=current_user.id).first()
+            if existing_attendee:
+                form.contact.data = existing_attendee.contact
+                form.status.data = existing_attendee.status
+        
+        if form.validate_on_submit():
             try:
-                send_confirmation_email(attendee, event, attendance)
-            except Exception as email_err:
-                app.logger.warning(f"Email failed but RSVP succeeded: {email_err}")
-            
-            flash('Attendance confirmed!', 'success')
-            return redirect(url_for('confirm'))
-        except Exception as e:
-            db.session.rollback()
-            app.logger.error(f"RSVP error: {e}")
-            import traceback
-            traceback.print_exc()
-            flash('An error occurred. Please try again.', 'danger')
-            return render_template('rsvp.html', event=event, form=form)
-    return render_template('rsvp.html', event=event, form=form)
+                # Find or create attendee profile linked to user
+                attendee = Attendee.query.filter_by(user_id=current_user.id).first()
+                if not attendee:
+                    # Try to find by email
+                    attendee = Attendee.query.filter_by(email=current_user.email).first()
+                    if attendee:
+                        attendee.user_id = current_user.id
+                    else:
+                        # Create new attendee
+                        attendee = Attendee(
+                            name=form.name.data or current_user.name,
+                            email=current_user.email,
+                            contact=form.contact.data or '',
+                            status=form.status.data or 'Other',
+                            user_id=current_user.id
+                        )
+                        db.session.add(attendee)
+                
+                # Update attendee info
+                attendee.name = form.name.data or current_user.name
+                attendee.contact = form.contact.data or ''
+                attendee.status = form.status.data or 'Other'
+                
+                # Flush to ensure attendee has an ID
+                db.session.flush()
+                
+                # Check if already registered for this event
+                existing_attendance = Attendance.query.filter_by(
+                    event_id=event_id,
+                    attendee_id=attendee.id
+                ).first()
+                if existing_attendance:
+                    flash('You have already registered for this event!', 'warning')
+                    return render_template('rsvp.html', event=event, form=form)
+                
+                # Create attendance record
+                attendance = Attendance(event_id=event_id, attendee_id=attendee.id)
+                attendance.generate_token()  # Generate unique QR token
+                db.session.add(attendance)
+                db.session.commit()
+                
+                # Send email confirmation with QR code (non-blocking)
+                try:
+                    send_confirmation_email(attendee, event, attendance)
+                except Exception as email_err:
+                    app.logger.warning(f"Email failed but RSVP succeeded: {email_err}")
+                
+                flash('Attendance confirmed!', 'success')
+                return redirect(url_for('confirm'))
+            except Exception as e:
+                db.session.rollback()
+                app.logger.error(f"RSVP submit error: {e}")
+                import traceback
+                traceback.print_exc()
+                flash('An error occurred. Please try again.', 'danger')
+                return render_template('rsvp.html', event=event, form=form)
+        return render_template('rsvp.html', event=event, form=form)
+    except Exception as e:
+        app.logger.error(f"RSVP route error: {e}")
+        import traceback
+        traceback.print_exc()
+        flash('An error occurred loading the RSVP page.', 'danger')
+        return redirect(url_for('index'))
 
 @app.route('/confirm')
 def confirm():
