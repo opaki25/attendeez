@@ -18,10 +18,14 @@ button, .btn, [role="button"] {
 }
 
 /* Custom styles for Attendly - Dark Theme */
+html {
+    background: #000;
+}
 body {
-    padding-bottom: 60px;
     background: var(--surface);
     color: #e5e5e5;
+    margin: 0;
+    padding: 0;
 }
 
 .site-header{position:sticky;top:0;z-index:40}
