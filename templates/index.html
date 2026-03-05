@@ -543,7 +543,7 @@
 {% if events %}
 <div class="events-grid" id="eventsGrid">
     {% for event in events %}
-    <div class="event-card" data-name="{{ event.name|lower }}" data-venue="{{ (event.venue or '')|lower }}" data-description="{{ (event.description or '')|lower }}">
+    <div class="event-card" data-name="{{ event.name|lower }}" data-venue="{{ (event.venue or '')|lower }}" data-description="{{ (event.description or '')|lower }}" data-organizer="{{ (event.organizer.name or '')|lower }}" data-organizer-username="{{ (event.organizer.username or '')|lower }}">
         {% if event.poster %}
         {% if event.poster.startswith('http') %}
         <img src="{{ event.poster }}" class="event-poster" alt="{{ event.name }}">
@@ -833,10 +833,14 @@ function filterEvents(query) {
         const name = card.dataset.name || '';
         const venue = card.dataset.venue || '';
         const description = card.dataset.description || '';
+        const organizer = card.dataset.organizer || '';
+        const organizerUsername = card.dataset.organizerUsername || '';
         
         const matches = name.includes(query) || 
                        venue.includes(query) || 
-                       description.includes(query);
+                       description.includes(query) ||
+                       organizer.includes(query) ||
+                       organizerUsername.includes(query);
         
         if (query === '' || matches) {
             card.classList.remove('hidden');

@@ -739,27 +739,13 @@ def profile():
 @app.route('/people')
 def people():
     """Browse all users/organizers"""
-    search = request.args.get('q', '').strip()
-    
-    query = User.query
-    
-    if search:
-        search_term = f'%{search}%'
-        query = query.filter(
-            db.or_(
-                User.name.ilike(search_term),
-                User.username.ilike(search_term),
-                User.bio.ilike(search_term)
-            )
-        )
-    
     # Order by those with most events first, then by name
-    users = query.outerjoin(Event).group_by(User.id).order_by(
+    users = User.query.outerjoin(Event).group_by(User.id).order_by(
         db.func.count(Event.id).desc(),
         User.name.asc()
     ).all()
     
-    return render_template('people.html', users=users, search=search)
+    return render_template('people.html', users=users)
 
 @app.route('/user/<int:user_id>')
 def public_profile(user_id):
@@ -781,6 +767,10 @@ def public_profile(user_id):
     ).order_by(Event.datetime.desc()).limit(6).all()
     
     return render_template('public_profile.html', user=user, upcoming_events=upcoming_events, past_events=past_events)
+
+@app.route('/googleaa6733e924144d84.html')
+def google_verification():
+    return render_template('googleaa6733e924144d84.html')
 
 @app.route('/')
 def index():

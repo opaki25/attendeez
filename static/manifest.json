@@ -1,0 +1,17 @@
+{
+  "name": "ATTENDEEZ",
+  "short_name": "ATTENDEEZ",
+  "description": "Create, manage, and discover events. RSVP to events, scan QR codes for check-in, and connect with event organizers.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#06b6d4",
+  "icons": [
+    {
+      "src": "/static/logoo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -4,6 +4,37 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>{% block title %}ATTENDEEZ{% endblock %}</title>
+        
+        <!-- SEO Meta Tags -->
+        <meta name="description" content="ATTENDEEZ - Create, manage, and discover events. RSVP to events, scan QR codes for check-in, and connect with event organizers.">
+        <meta name="keywords" content="events, RSVP, event management, ticketing, check-in, QR code">
+        <meta name="author" content="ATTENDEEZ">
+        <meta name="robots" content="index, follow">
+        
+        <!-- Favicon -->
+        <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+        <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.svg') }}">
+        <link rel="apple-touch-icon" href="{{ url_for('static', filename='logoo.svg') }}">
+        <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+        
+        <!-- Open Graph / Facebook -->
+        <meta property="og:type" content="website">
+        <meta property="og:url" content="{{ request.url }}">
+        <meta property="og:title" content="{% block og_title %}ATTENDEEZ - Event Management Platform{% endblock %}">
+        <meta property="og:description" content="{% block og_description %}Create, manage, and discover events. RSVP to events, scan QR codes for check-in, and connect with event organizers.{% endblock %}">
+        <meta property="og:image" content="{{ url_for('static', filename='logoo.svg', _external=True) }}">
+        <meta property="og:site_name" content="ATTENDEEZ">
+        
+        <!-- Twitter -->
+        <meta name="twitter:card" content="summary_large_image">
+        <meta name="twitter:url" content="{{ request.url }}">
+        <meta name="twitter:title" content="{% block twitter_title %}ATTENDEEZ - Event Management Platform{% endblock %}">
+        <meta name="twitter:description" content="{% block twitter_description %}Create, manage, and discover events. RSVP to events, scan QR codes for check-in, and connect with event organizers.{% endblock %}">
+        <meta name="twitter:image" content="{{ url_for('static', filename='logoo.svg', _external=True) }}">
+        
+        <!-- Theme Color -->
+        <meta name="theme-color" content="#06b6d4">
+        
         <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
         <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
         <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
