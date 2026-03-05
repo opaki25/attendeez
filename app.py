@@ -248,7 +248,12 @@ class Organizer:
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    try:
+        if user_id is None:
+            return None
+        return User.query.get(int(user_id))
+    except (ValueError, TypeError):
+        return None
 
 # Forms
 class EventForm(FlaskForm):
@@ -663,13 +668,16 @@ def rsvp(event_id):
         
         # Pre-fill form with user's info if available
         if request.method == 'GET':
-            form.name.data = current_user.name
-            form.email.data = current_user.email
+            form.name.data = current_user.name if current_user.name else ''
+            form.email.data = current_user.email if current_user.email else ''
             # Try to get existing attendee profile
-            existing_attendee = Attendee.query.filter_by(user_id=current_user.id).first()
-            if existing_attendee:
-                form.contact.data = existing_attendee.contact
-                form.status.data = existing_attendee.status
+            try:
+                existing_attendee = Attendee.query.filter_by(user_id=current_user.id).first()
+                if existing_attendee:
+                    form.contact.data = existing_attendee.contact or ''
+                    form.status.data = existing_attendee.status or 'Other'
+            except Exception as e:
+                app.logger.warning(f"Could not load attendee profile: {e}")
         
         if form.validate_on_submit():
             try:
