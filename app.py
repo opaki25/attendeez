@@ -1664,6 +1664,16 @@ try:
         from sqlalchemy import text, inspect
         inspector = inspect(db.engine)
         
+        # Check and add columns to user table
+        if 'user' in inspector.get_table_names():
+            user_columns = [col['name'] for col in inspector.get_columns('user')]
+            if 'reset_token' not in user_columns:
+                db.session.execute(text('ALTER TABLE "user" ADD COLUMN reset_token VARCHAR(100)'))
+                print('Added reset_token column to user')
+            if 'reset_token_expiry' not in user_columns:
+                db.session.execute(text('ALTER TABLE "user" ADD COLUMN reset_token_expiry TIMESTAMP'))
+                print('Added reset_token_expiry column to user')
+        
         # Check and add columns to event table
         if 'event' in inspector.get_table_names():
             event_columns = [col['name'] for col in inspector.get_columns('event')]
