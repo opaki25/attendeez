@@ -770,13 +770,13 @@ def public_profile(user_id):
     # Get user's public events (upcoming and past)
     now = datetime.now(timezone.utc).replace(tzinfo=None)  # Naive UTC for DB comparison
     upcoming_events = Event.query.filter(
-        Event.created_by == user.id,
+        Event.creator_id == user.id,
         Event.datetime != None,
         Event.datetime >= now
     ).order_by(Event.datetime.asc()).all()
     
     past_events = Event.query.filter(
-        Event.created_by == user.id,
+        Event.creator_id == user.id,
         Event.datetime != None,
         Event.datetime < now
     ).order_by(Event.datetime.desc()).limit(6).all()
