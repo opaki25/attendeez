@@ -602,7 +602,7 @@
             <div class="event-actions">
                 <div class="event-actions-row">
                     <a href="{{ url_for('event_detail', event_id=event.id) }}" class="btn-details">View Details</a>
-                    <button class="btn-share" onclick="openShareModal('{{ event.name }}', '{{ url_for('event_detail', event_id=event.id, _external=True) }}')" title="Share Event">
+                    <button class="btn-share" onclick="openShareModal({{ event.name|tojson }}, '{{ url_for('event_detail', event_id=event.id, _external=True) }}')" title="Share Event">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="18" cy="5" r="3"></circle>
                             <circle cx="6" cy="12" r="3"></circle>
